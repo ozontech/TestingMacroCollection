@@ -13,9 +13,9 @@ enum ArbitraryMacroError: CustomStringConvertible, Error {
     var description: String {
         switch self {
         case .unsupportedType:
-            return "@Arbitrary macro is attached to an unsupported declaration"
+            "@Arbitrary macro is attached to an unsupported declaration"
         case .wrongArbitraryType:
-            return "ArbitraryType can only be static or dynamic"
+            "ArbitraryType can only be static or dynamic"
         }
     }
 }

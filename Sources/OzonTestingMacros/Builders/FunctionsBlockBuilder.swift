@@ -86,7 +86,7 @@ enum FunctionsBlockBuilder {
                 )
             )
 
-            let genericTypes = function.genericParameterClause?.parameters.compactMap { $0.name.text } ?? []
+            let genericTypes = function.genericParameterClause?.parameters.compactMap(\.name.text) ?? []
             let accessModifiers = insertNonisolatedUnsafeModifierFirstTo(
                 accessModifiers,
                 shouldInsertModifier: !genericTypes.isEmpty && isActor
@@ -108,7 +108,7 @@ enum FunctionsBlockBuilder {
                     partialResult[name] = replaceGenericsWithAny(type: type, genericTypes: genericTypes)
                 }
             let invocationArgumentsTypes = function.signature.parameterClause.parameters
-                .map { $0.type }
+                .map(\.type)
             let propertiesShortName = function.signature.parameterClause.parameters
                 .compactMap {
                     let argumentName = if $0.firstName.text == "_" {
@@ -129,12 +129,10 @@ enum FunctionsBlockBuilder {
             let isFuncThrowable = function.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil
             let isAsyncFunc = function.signature.effectSpecifiers?.asyncSpecifier != nil
 
-            let funcModifiers: DeclModifierListSyntax
-
-            if !functionsModifiers.isEmpty {
-                funcModifiers = functionsModifiers
+            let funcModifiers: DeclModifierListSyntax = if !functionsModifiers.isEmpty {
+                functionsModifiers
             } else {
-                funcModifiers = accessModifiers
+                accessModifiers
             }
 
             let hasReturnTypeGenerics = genericFinder.hasGenerics(functionReturnType)
@@ -206,7 +204,7 @@ enum FunctionsBlockBuilder {
                     shouldInsertModifier: !genericTypes.isEmpty
                 )
             }
-            let arguments = function.signature.parameterClause.parameters.compactMap { $0.type }
+            let arguments = function.signature.parameterClause.parameters.compactMap(\.type)
             let closureProperty = VariablesFactory.makeClosureProperty(
                 clearMethodBuilder: clearMethodBuilder,
                 varName: propertiesShortName,
@@ -867,7 +865,7 @@ enum FunctionsBlockBuilder {
 
             var exprSyntax: ExprSyntaxProtocol
 
-            if isAsync && isThrowable {
+            if isAsync, isThrowable {
                 let awaitExpr = AwaitExprSyntax(expression: expression)
                 exprSyntax = TryExprSyntax(expression: awaitExpr)
             } else if isAsync {
@@ -908,7 +906,8 @@ enum FunctionsBlockBuilder {
             return CodeBlockItemSyntax(item: returnStmtItem)
         }
 
-        /// Generates a `performLockedAction { }` call whose closure increments the `callsCount` property and adds arguments if any.
+        /// Generates a `performLockedAction { }` call whose closure increments the `callsCount` property and adds arguments if
+        /// any.
         ///
         ///     lock.performLockedAction {
         ///         makeWorkArgumentCallsCount += 1

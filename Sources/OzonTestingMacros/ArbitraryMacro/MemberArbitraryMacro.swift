@@ -56,10 +56,8 @@ extension ArbitraryMacro: MemberMacro {
         let initParameterList = variables.enumerated().reduce(into: FunctionParameterListSyntax()) { partialResult, item in
             let variable = item.element
 
-            let parameter: FunctionParameterSyntax
-
-            if variable.1.is(FunctionTypeSyntax.self) {
-                parameter = FunctionParameterSyntax(
+            let parameter = if variable.1.is(FunctionTypeSyntax.self) {
+                FunctionParameterSyntax(
                     firstName: variable.0,
                     type: AttributedTypeSyntax(
                         specifiers: .init([]),
@@ -74,7 +72,7 @@ extension ArbitraryMacro: MemberMacro {
                     trailingComma: item.offset == variables.count - 1 ? nil : .commaToken()
                 )
             } else {
-                parameter = FunctionParameterSyntax(
+                FunctionParameterSyntax(
                     firstName: variable.0,
                     type: variable.1,
                     trailingComma: item.offset == variables.count - 1 ? nil : .commaToken()
@@ -93,7 +91,7 @@ extension ArbitraryMacro: MemberMacro {
         return .init(
             modifiers: accessModifiers,
             signature: initSignature,
-            body: makeInitBody(variables: variables.map { $0.0 })
+            body: makeInitBody(variables: variables.map(\.0))
         )
     }
 

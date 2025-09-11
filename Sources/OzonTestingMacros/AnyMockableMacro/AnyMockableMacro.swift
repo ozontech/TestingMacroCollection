@@ -99,9 +99,9 @@ public struct AnyMockableMacro: MemberMacro {
     ///
     private static func makeModifiersForMockClass(_ declAccessModifier: DeclModifierSyntax) -> DeclModifierListSyntax {
         if declAccessModifier.isOpen {
-            return .init(arrayLiteral: declAccessModifier)
+            .init(arrayLiteral: declAccessModifier)
         } else {
-            return .init(arrayLiteral: declAccessModifier, .init(name: .keyword(.final)))
+            .init(arrayLiteral: declAccessModifier, .init(name: .keyword(.final)))
         }
     }
 }

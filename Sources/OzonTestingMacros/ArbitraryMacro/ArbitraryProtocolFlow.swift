@@ -45,7 +45,7 @@ extension ArbitraryMacro {
                 ),
                 returnClause: .init(type: IdentifierTypeSyntax(name: typeName))
             ),
-            body: makeArbitraryMethodBody(typeName: typeName, parameters: parameters.map { $0.name })
+            body: makeArbitraryMethodBody(typeName: typeName, parameters: parameters.map(\.name))
         )
     }
 
@@ -158,7 +158,7 @@ extension ArbitraryMacro {
                 period: .periodToken(),
                 declName: DeclReferenceExprSyntax(baseName: .identifier(arbitraryIdentifier))
             )
-        case let .nested(cleanType):
+        case .nested(let cleanType):
             let typeName: String
             let type = cleanType.as(MemberTypeSyntax.self)
             let baseTypeName = type?.baseType.as(IdentifierTypeSyntax.self)?.name.text
@@ -180,7 +180,7 @@ extension ArbitraryMacro {
                 arguments: .init([]),
                 rightParen: .rightParenToken()
             )
-        case let .closure(functionType):
+        case .closure(let functionType):
             var wildcards: ClosureShorthandParameterListSyntax = .init()
 
             functionType.parameters.forEach { element in
@@ -441,7 +441,7 @@ extension ArbitraryMacro {
     ///
     private static func getInnerTypesFromMembers(_ members: MemberBlockItemListSyntax) -> [String] {
         members
-            .filter { $0.decl.isTypeSyntax }
+            .filter(\.decl.isTypeSyntax)
             .compactMap { member in
                 let decl = member.decl
 

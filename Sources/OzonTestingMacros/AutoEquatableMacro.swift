@@ -133,7 +133,7 @@ public struct AutoEquatableMacro: ExtensionMacro {
 
                 return EnumCase(title: title, parameters: parameters)
             }
-            .compactMap { $0 }
+            .compactMap(\.self)
     }
 
     /// Generates the name of the parameter based on the associative type of the case parameter.
@@ -178,7 +178,7 @@ public struct AutoEquatableMacro: ExtensionMacro {
         let codeBlock: CodeBlockSyntax
 
         switch bodyContentType {
-        case let .enum(enumCases, variables):
+        case .enum(let enumCases, let variables):
             let switchExpr = makeSwitchExpr(enumCases: enumCases, enumHasVariables: !variables.isEmpty)
             let item = ExpressionStmtSyntax(expression: switchExpr)
             let codeBlockItem = CodeBlockItemSyntax.Item(item)
@@ -192,7 +192,7 @@ public struct AutoEquatableMacro: ExtensionMacro {
 
             stmnts.append(.init(item: codeBlockItem))
             codeBlock = CodeBlockSyntax(statements: stmnts)
-        case let .other(variables):
+        case .other(let variables):
             codeBlock = makeFuncBody(variables: variables)
         }
 
@@ -294,11 +294,10 @@ public struct AutoEquatableMacro: ExtensionMacro {
     ///   - Returns: the syntax of the case for the `Switch` expression.
     ///
     private static func makeEnumCase(_ caseModel: EnumCase, enumHasVariables: Bool) -> SwitchCaseSyntax {
-        let tupleExpr: TupleExprSyntax
-        if caseModel.parameters.isEmpty {
-            tupleExpr = makeEnumCaseTupleExprWithoutParameter(caseModel)
+        let tupleExpr: TupleExprSyntax = if caseModel.parameters.isEmpty {
+            makeEnumCaseTupleExprWithoutParameter(caseModel)
         } else {
-            tupleExpr = makeEnumCaseTupleExprWithParameters(caseModel)
+            makeEnumCaseTupleExprWithParameters(caseModel)
         }
 
         let switchCaseItem = SwitchCaseItemSyntax(
@@ -308,19 +307,18 @@ public struct AutoEquatableMacro: ExtensionMacro {
             caseItems: .init([switchCaseItem])
         )
 
-        let returnStmt: ReturnStmtSyntax
-        if caseModel.parameters.isEmpty, !enumHasVariables {
-            returnStmt = ReturnStmtSyntax(
+        let returnStmt: ReturnStmtSyntax = if caseModel.parameters.isEmpty, !enumHasVariables {
+            ReturnStmtSyntax(
                 returnKeyword: .keyword(.return),
                 expression: BooleanLiteralExprSyntax(literal: .keyword(.true))
             )
         } else if enumHasVariables, caseModel.parameters.isEmpty {
-            returnStmt = ReturnStmtSyntax(
+            ReturnStmtSyntax(
                 returnKeyword: .keyword(.return),
                 expression: DeclReferenceExprSyntax(baseName: .identifier(.otherVariablesCheck))
             )
         } else {
-            returnStmt = makeReturnStmt(parameters: caseModel.parameters, enumHasVariables: enumHasVariables)
+            makeReturnStmt(parameters: caseModel.parameters, enumHasVariables: enumHasVariables)
         }
 
         let codeBlockItem = CodeBlockItemSyntax.Item(returnStmt)

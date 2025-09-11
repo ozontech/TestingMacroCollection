@@ -18,7 +18,7 @@ enum MockMacroError: CustomStringConvertible, Error {
     var description: String {
         switch self {
         case .appliedOnlyWithProtocols:
-            return "@Mock should only be used with protocols"
+            "@Mock should only be used with protocols"
         }
     }
 }
@@ -108,7 +108,7 @@ public struct MockMacro: PeerMacro {
 
         let shouldBeFinal = inputParameters.accessModifier != .open && inputParameters.heritability == .final
 
-        if !initializers.contains(where: { $0.isEmptyInit }) {
+        if !initializers.contains(where: \.isEmptyInit) {
             var initAccessModifier = DeclModifierListSyntax([])
 
             if inputParameters.accessModifier == .open || inputParameters.accessModifier == .public {

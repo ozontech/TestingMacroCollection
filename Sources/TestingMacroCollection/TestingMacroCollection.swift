@@ -43,8 +43,10 @@ public macro Mock(
 )
 
 /// Macro to generate mocks for any protocols.
-/// Applies in case of multiple protocol inheritance, protocol inheritance for `AnyActor`, or protocol storage in an inaccessible location.
-/// The macro automatically adds an auxiliary `@MockAccessor` macro to non-optional properties to proxy the `underlying` properties of the `Mock` inner class, а также макрос `@FunctionBodyMock`для генерации проксирования методов мокового класса.
+/// Applies in case of multiple protocol inheritance, protocol inheritance for `AnyActor`, or protocol storage in an inaccessible
+/// location.
+/// The macro automatically adds an auxiliary `@MockAccessor` macro to non-optional properties to proxy the `underlying`
+/// properties of the `Mock` inner class, а также макрос `@FunctionBodyMock`для генерации проксирования методов мокового класса.
 ///
 ///  - Parameter defaultValue: default value generation for non-optional properties. Default: `.static`.
 ///
@@ -221,8 +223,12 @@ public macro Nilable() = #externalMacro(module: "OzonTestingMacros", type: "Nila
 ///  }
 /// ```
 ///
-/// - Parameter arbitraryType: the `Arbitrary` type. When using the `.dynamic` function, it generates random values of the `Foundation` types.
+/// - Parameter arbitraryType: the `Arbitrary` type. When using the `.dynamic` function, it generates random values of the
+/// `Foundation` types.
 ///
 @attached(peer, names: suffixed(Arbitrary))
 @attached(member, names: arbitrary)
-public macro Arbitrary(_ arbitraryType: ArbitraryType = .static) = #externalMacro(module: "OzonTestingMacros", type: "ArbitraryMacro")
+public macro Arbitrary(_ arbitraryType: ArbitraryType = .static) = #externalMacro(
+    module: "OzonTestingMacros",
+    type: "ArbitraryMacro"
+)

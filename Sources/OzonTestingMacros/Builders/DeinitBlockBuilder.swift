@@ -56,14 +56,12 @@ enum DeinitBlockBuilder {
 
         guard !clearMethodNames.isEmpty else { return [] }
 
-        let functionCalls: [ExprSyntaxProtocol]
-
-        switch dataStructure {
+        let functionCalls: [ExprSyntaxProtocol] = switch dataStructure {
         case .actor:
-            functionCalls = makeFunctionCallsForActor(clearMethodNames: clearMethodNames)
+            makeFunctionCallsForActor(clearMethodNames: clearMethodNames)
         case .finalClass,
              .nonFinalClass:
-            functionCalls = makeFunctionCallsForClass(clearMethodNames: clearMethodNames)
+            makeFunctionCallsForClass(clearMethodNames: clearMethodNames)
         }
 
         let codeBlockItemList: CodeBlockItemListSyntax = functionCalls
@@ -72,12 +70,10 @@ enum DeinitBlockBuilder {
                 partialResult.append(.init(item: item))
             }
 
-        let deinitDecl: DeinitializerDeclSyntax
-
-        if dataStructure == .actor {
-            deinitDecl = DeinitializerDeclSyntax(body: .init(statements: makeTaskCall(body: codeBlockItemList)))
+        let deinitDecl = if dataStructure == .actor {
+            DeinitializerDeclSyntax(body: .init(statements: makeTaskCall(body: codeBlockItemList)))
         } else {
-            deinitDecl = DeinitializerDeclSyntax(body: .init(statements: codeBlockItemList))
+            DeinitializerDeclSyntax(body: .init(statements: codeBlockItemList))
         }
 
         result.append(.init(decl: deinitDecl))

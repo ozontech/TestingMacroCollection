@@ -16,7 +16,8 @@ enum VariablesBlockBuilder {
     ///     - accessModifiers: access modifiers.
     ///     - generateOnlyUnderlying: flag for generating only underlying properties. Is used for `AnyMockable` macro.
     ///     - isActor: flag if the mock is an actor.
-    ///  - Returns: an array of `MemberBlockItemSyntax` objects with `underlying` and regular properties, in addition to `set` methods for actors.
+    ///  - Returns: an array of `MemberBlockItemSyntax` objects with `underlying` and regular properties, in addition to `set`
+    /// methods for actors.
     ///
     /// If the property is non-optional, it generates the construction:
     ///

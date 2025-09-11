@@ -17,11 +17,11 @@ enum AccessModifier: String {
     var modifierDecl: DeclModifierSyntax {
         switch self {
         case .public:
-            return .init(name: .keyword(.public))
+            .init(name: .keyword(.public))
         case .open:
-            return .init(name: .keyword(.open))
+            .init(name: .keyword(.open))
         case .internal:
-            return .init(name: .keyword(.internal))
+            .init(name: .keyword(.internal))
         }
     }
 }

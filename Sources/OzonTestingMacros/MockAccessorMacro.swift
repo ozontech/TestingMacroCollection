@@ -19,9 +19,9 @@ enum MockAccessorError: CustomStringConvertible, Error {
     var description: String {
         switch self {
         case .notFoundName:
-            return "Property name not found"
+            "Property name not found"
         case .appliedNotToProperty:
-            return "@MockAccessor can only be attached to a property"
+            "@MockAccessor can only be attached to a property"
         }
     }
 }

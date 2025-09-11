@@ -18,7 +18,7 @@ enum PerformanceMeasureMacroError: CustomStringConvertible, Error {
     var description: String {
         switch self {
         case .expectsClosure:
-            return "#PerformanceMeasureMacro is waiting for a closure"
+            "#PerformanceMeasureMacro is waiting for a closure"
         }
     }
 }
