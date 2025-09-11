@@ -22,9 +22,9 @@ extension TupleTypeSyntax {
 
     private func makeDefaultInitializationIfPossible() -> InitializerClauseSyntax? {
         let tupleElements = elements.compactMap { $0.type.as(IdentifierTypeSyntax.self) }
-        let allTupleTypesIsFoundation = tupleElements.allSatisfy { $0.isSwiftOrFoundationType }
+        let allTupleTypesIsFoundation = tupleElements.allSatisfy(\.isSwiftOrFoundationType)
         let shouldGenerateInit = allTupleTypesIsFoundation && tupleElements.count == elements.count
 
-        return shouldGenerateInit ? .initForTuples(tupleTypes: tupleElements.map { $0.name.text }) : nil
+        return shouldGenerateInit ? .initForTuples(tupleTypes: tupleElements.map(\.name.text)) : nil
     }
 }

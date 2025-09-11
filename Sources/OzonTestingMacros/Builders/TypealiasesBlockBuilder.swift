@@ -42,7 +42,7 @@ enum TypealiasBlockBuilder {
         _ typealiasValue: (String, String),
         accessModifier: DeclModifierSyntax?
     ) -> MemberBlockItemSyntax {
-        let modifierList = [accessModifier].compactMap { $0 }
+        let modifierList = [accessModifier].compactMap(\.self)
         let value = IdentifierTypeSyntax(name: .identifier(typealiasValue.1))
         let initializer = TypeInitializerClauseSyntax(value: value)
         let decl = TypeAliasDeclSyntax(

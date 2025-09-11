@@ -64,10 +64,10 @@ enum MockMacroInputParametersHandler {
             .as(StringSegmentSyntax.self)?
             .content.text,
             let value = element.value
-                .as(StringLiteralExprSyntax.self)?
-                .segments.first?
-                .as(StringSegmentSyntax.self)?
-                .content.text else { return ("", "") }
+            .as(StringLiteralExprSyntax.self)?
+            .segments.first?
+            .as(StringSegmentSyntax.self)?
+            .content.text else { return ("", "") }
 
         return (key, value)
     }

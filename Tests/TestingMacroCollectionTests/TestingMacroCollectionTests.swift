@@ -10,7 +10,7 @@ import SwiftSyntaxMacrosTestSupport
 import XCTest
 
 #if canImport(TestingMacroCollection)
-import TestingMacros
+import OzonTestingMacros
 
 let testMacros: [String: Macro.Type] = [
     "Mock": MockMacro.self,

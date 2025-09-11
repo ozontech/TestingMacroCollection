@@ -38,13 +38,15 @@ public macro Mock(
     sendableMode: SendableMode = .auto,
     defaultValue: DefaultValue = .static
 ) = #externalMacro(
-    module: "TestingMacros",
+    module: "OzonTestingMacros",
     type: "MockMacro"
 )
 
 /// Macro to generate mocks for any protocols.
-/// Applies in case of multiple protocol inheritance, protocol inheritance for `AnyActor`, or protocol storage in an inaccessible location.
-/// The macro automatically adds an auxiliary `@MockAccessor` macro to non-optional properties to proxy the `underlying` properties of the `Mock` inner class, а также макрос `@FunctionBodyMock`для генерации проксирования методов мокового класса.
+/// Applies in case of multiple protocol inheritance, protocol inheritance for `AnyActor`, or protocol storage in an inaccessible
+/// location.
+/// The macro automatically adds an auxiliary `@MockAccessor` macro to non-optional properties to proxy the `underlying`
+/// properties of the `Mock` inner class, а также макрос `@FunctionBodyMock`для генерации проксирования методов мокового класса.
 ///
 ///  - Parameter defaultValue: default value generation for non-optional properties. Default: `.static`.
 ///
@@ -83,7 +85,7 @@ public macro Mock(
 @attached(memberAttribute)
 @attached(extension, conformances: ProxyableMock)
 public macro AnyMockable(defaultValue: DefaultValue = .static) = #externalMacro(
-    module: "TestingMacros",
+    module: "OzonTestingMacros",
     type: "AnyMockableMacro"
 )
 
@@ -102,7 +104,7 @@ public macro AnyMockable(defaultValue: DefaultValue = .static) = #externalMacro(
 ///
 @attached(accessor)
 public macro MockAccessor() = #externalMacro(
-    module: "TestingMacros",
+    module: "OzonTestingMacros",
     type: "MockAccessorMacro"
 )
 
@@ -116,7 +118,7 @@ public macro MockAccessor() = #externalMacro(
 ///
 @attached(body)
 public macro FunctionBodyMock() = #externalMacro(
-    module: "TestingMacros",
+    module: "OzonTestingMacros",
     type: "FunctionBodyMockMacro"
 )
 
@@ -132,7 +134,7 @@ public macro FunctionBodyMock() = #externalMacro(
 ///
 @freestanding(expression)
 public macro performanceMeasure(_ closure: () throws -> Void) -> Double = #externalMacro(
-    module: "TestingMacros",
+    module: "OzonTestingMacros",
     type: "PerformanceMeasureMacro"
 )
 
@@ -157,7 +159,7 @@ public macro performanceMeasure(_ closure: () throws -> Void) -> Double = #exter
 /// ```
 ///
 @attached(extension, conformances: Equatable, names: named(==))
-public macro AutoEquatable() = #externalMacro(module: "TestingMacros", type: "AutoEquatableMacro")
+public macro AutoEquatable() = #externalMacro(module: "OzonTestingMacros", type: "AutoEquatableMacro")
 
 /// Helper macro.
 /// When attached to a declaration, signals other macros to ignore this declaration.
@@ -174,7 +176,7 @@ public macro AutoEquatable() = #externalMacro(module: "TestingMacros", type: "Au
 /// property when implementing the `==` method.
 ///
 @attached(peer)
-public macro Ignored() = #externalMacro(module: "TestingMacros", type: "IgnoredMacro")
+public macro Ignored() = #externalMacro(module: "OzonTestingMacros", type: "IgnoredMacro")
 
 /// Helper macro.
 /// When attached to a declaration, signals other macros to use `nil` as property default.
@@ -190,7 +192,7 @@ public macro Ignored() = #externalMacro(module: "TestingMacros", type: "IgnoredM
 /// `Arbitrary` generates default `tapHandler: TapHandler? = nil`.
 ///
 @attached(peer)
-public macro Nilable() = #externalMacro(module: "TestingMacros", type: "NilableMacro")
+public macro Nilable() = #externalMacro(module: "OzonTestingMacros", type: "NilableMacro")
 
 /// A macro for generating a stub for the model. Generates an `enum` with an `arbitrary` method inside.
 /// A macro can be attached to structures, classes, actors, and protocols. It also generates a default initializer if necessary.
@@ -221,8 +223,12 @@ public macro Nilable() = #externalMacro(module: "TestingMacros", type: "NilableM
 ///  }
 /// ```
 ///
-/// - Parameter arbitraryType: the `Arbitrary` type. When using the `.dynamic` function, it generates random values of the `Foundation` types.
+/// - Parameter arbitraryType: the `Arbitrary` type. When using the `.dynamic` function, it generates random values of the
+/// `Foundation` types.
 ///
 @attached(peer, names: suffixed(Arbitrary))
 @attached(member, names: arbitrary)
-public macro Arbitrary(_ arbitraryType: ArbitraryType = .static) = #externalMacro(module: "TestingMacros", type: "ArbitraryMacro")
+public macro Arbitrary(_ arbitraryType: ArbitraryType = .static) = #externalMacro(
+    module: "OzonTestingMacros",
+    type: "ArbitraryMacro"
+)

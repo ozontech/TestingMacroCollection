@@ -25,9 +25,9 @@ final class ClearMethodBuilder {
 
         var propertyName: String {
             switch self {
-            case let .collection(propertyName),
-                 let .nilable(propertyName):
-                return propertyName
+            case .collection(let propertyName),
+                 .nilable(let propertyName):
+                propertyName
             }
         }
     }
@@ -91,15 +91,13 @@ final class ClearMethodBuilder {
         }
 
         let modifiers = parameters.reduce(into: DeclModifierListSyntax()) { partialResult, parameter in
-            let modifier: DeclModifierSyntax
-
-            switch parameter {
+            let modifier: DeclModifierSyntax = switch parameter {
             case .open:
-                modifier = .init(name: .keyword(.open))
+                .init(name: .keyword(.open))
             case .overriding:
-                modifier = .init(name: .keyword(.override))
+                .init(name: .keyword(.override))
             case .public:
-                modifier = .init(name: .keyword(.public))
+                .init(name: .keyword(.public))
             }
 
             partialResult.append(modifier)
@@ -146,13 +144,11 @@ final class ClearMethodBuilder {
                         }
                     }
 
-                    let rightOperand: ExprSyntaxProtocol
-
-                    switch item.element {
+                    let rightOperand: ExprSyntaxProtocol = switch item.element {
                     case .nilable:
-                        rightOperand = NilLiteralExprSyntax()
+                        NilLiteralExprSyntax()
                     case .collection:
-                        rightOperand = ArrayExprSyntax(elements: .init([]))
+                        ArrayExprSyntax(elements: .init([]))
                     }
 
                     let expr = InfixOperatorExprSyntax(

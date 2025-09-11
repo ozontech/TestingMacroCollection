@@ -59,11 +59,9 @@ public struct ArbitraryMacro: PeerMacro {
 
                 partialResult.append(.init(name: name, type: type, isIgnored: variable.isIgnored, isNilable: variable.isNilable))
             }
-        let arbitraryMethod: FunctionDeclSyntax
-
-        switch arbitraryType {
+        let arbitraryMethod: FunctionDeclSyntax = switch arbitraryType {
         case .mock:
-            arbitraryMethod = makeArbitraryMethodForMock(
+            makeArbitraryMethodForMock(
                 accessModifier: accessModifier,
                 typeName: typeName,
                 parameters: parameters,
@@ -71,7 +69,7 @@ public struct ArbitraryMacro: PeerMacro {
                 declMembers: declGroup.memberBlock.members
             )
         case .model:
-            arbitraryMethod = makeArbitraryMethodForModel(
+            makeArbitraryMethodForModel(
                 accessModifier: accessModifier,
                 typeName: typeName,
                 parameters: parameters,
@@ -148,29 +146,29 @@ public struct ArbitraryMacro: PeerMacro {
     ///
     static func getVariableType(_ type: TypeSyntax) -> VariableType {
         if let optionalType = type.as(OptionalTypeSyntax.self), !optionalType.wrappedType.is(MemberTypeSyntax.self) {
-            return .optional
+            .optional
         } else if let optionalType = type.as(OptionalTypeSyntax.self), optionalType.wrappedType.is(MemberTypeSyntax.self) {
-            return .nested(cleanType: optionalType.wrappedType)
+            .nested(cleanType: optionalType.wrappedType)
         } else if isSwiftOrFoundationType(type) {
-            return .foundation
+            .foundation
         } else if type.is(ArrayTypeSyntax.self) || type.as(IdentifierTypeSyntax.self)?.name.text == String.array {
-            return .array
+            .array
         } else if let forceUnwrappedType = type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
-            return getVariableType(forceUnwrappedType.wrappedType)
+            getVariableType(forceUnwrappedType.wrappedType)
         } else if let functionType = type.findSyntaxInTree(FunctionTypeSyntax.self) {
-            return .closure(cleanType: functionType)
+            .closure(cleanType: functionType)
         } else if type.is(TupleTypeSyntax.self) {
-            return .tuple
+            .tuple
         } else if type.is(DictionaryTypeSyntax.self) || type.as(IdentifierTypeSyntax.self)?.name.text == String.dictionary {
-            return .dictionary
+            .dictionary
         } else if let type = type.as(IdentifierTypeSyntax.self)?.name.text, type == String.set {
-            return .set
+            .set
         } else if type.is(MemberTypeSyntax.self) {
-            return .nested(cleanType: type)
+            .nested(cleanType: type)
         } else if let attributedType = type.as(AttributedTypeSyntax.self) {
-            return getVariableType(attributedType.baseType)
+            getVariableType(attributedType.baseType)
         } else {
-            return .custom
+            .custom
         }
     }
 
@@ -216,19 +214,19 @@ public struct ArbitraryMacro: PeerMacro {
     private static func getTypeNameFromDecl(_ decl: DeclGroupSyntax) -> TokenSyntax? {
         switch decl.kind {
         case .classDecl:
-            return decl.as(ClassDeclSyntax.self)?.name
+            decl.as(ClassDeclSyntax.self)?.name
         case .structDecl:
-            return decl.as(StructDeclSyntax.self)?.name
+            decl.as(StructDeclSyntax.self)?.name
         case .extensionDecl:
-            return decl.as(ExtensionDeclSyntax.self)?.extendedType.as(IdentifierTypeSyntax.self)?.name
+            decl.as(ExtensionDeclSyntax.self)?.extendedType.as(IdentifierTypeSyntax.self)?.name
         case .actorDecl:
-            return decl.as(ActorDeclSyntax.self)?.name
+            decl.as(ActorDeclSyntax.self)?.name
         case .enumDecl:
-            return decl.as(EnumDeclSyntax.self)?.name
+            decl.as(EnumDeclSyntax.self)?.name
         case .protocolDecl:
-            return decl.as(ProtocolDeclSyntax.self)?.name
+            decl.as(ProtocolDeclSyntax.self)?.name
         default:
-            return nil
+            nil
         }
     }
 }

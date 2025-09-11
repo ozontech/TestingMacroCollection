@@ -17,23 +17,23 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0" ..< "601.0.1"),
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0"..<"601.0.1"),
     ],
     targets: [
         .macro(
-            name: "TestingMacros",
+            name: "OzonTestingMacros",
             dependencies: [
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
             ]
         ),
-        .target(name: "TestingMacroCollection", dependencies: ["TestingMacros"]),
+        .target(name: "TestingMacroCollection", dependencies: ["OzonTestingMacros"]),
         .executableTarget(name: "TestingMacroCollectionSandbox", dependencies: ["TestingMacroCollection"]),
         .testTarget(
             name: "TestingMacroCollectionTests",
             dependencies: [
                 "TestingMacroCollection",
-                "TestingMacros",
+                "OzonTestingMacros",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ]
         ),

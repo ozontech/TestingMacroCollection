@@ -1,5 +1,12 @@
 # Version History
 
+# 3.0.1
+
+## Technical changes
+
+- Renamed the Macro target TestingMacros to OzonTestingMacros.
+- Ran swiftformat.
+
 # 3.0.0
 
 ## Added

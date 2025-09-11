@@ -31,7 +31,7 @@ extension InitializerDeclSyntax {
             modifiers.append(.init(name: .keyword(.public)))
         }
 
-        if !parentModifiers.contains(where: { $0.isFinal }), !isActorInit {
+        if !parentModifiers.contains(where: \.isFinal), !isActorInit {
             modifiers.append(.init(name: .keyword(.required)))
         }
     }

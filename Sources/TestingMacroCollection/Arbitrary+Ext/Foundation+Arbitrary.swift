@@ -16,7 +16,7 @@ public extension String {
 
     private static func dynamicArbitrary(length: Int) -> String {
         let letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        return String((0 ..< length).compactMap { _ in letters.randomElement() })
+        return String((0..<length).compactMap { _ in letters.randomElement() })
     }
 }
 
@@ -36,7 +36,7 @@ public extension Int {
         case .static:
             return 123
         case .dynamic:
-            guard !exclusions.isEmpty else { return Int.random(in: min ... max) }
+            guard !exclusions.isEmpty else { return Int.random(in: min...max) }
 
             let allowedRange = ClosedRange(uncheckedBounds: (min, max)).filter { !exclusions.contains($0) }
             return allowedRange.randomElement() ?? min
@@ -55,7 +55,7 @@ public extension Int64 {
         case .static:
             return 123
         case .dynamic:
-            guard !exclusions.isEmpty else { return Int64.random(in: min ... max) }
+            guard !exclusions.isEmpty else { return Int64.random(in: min...max) }
 
             let allowedRange = ClosedRange(uncheckedBounds: (min, max)).filter { !exclusions.contains($0) }
             return allowedRange.randomElement() ?? min
@@ -76,7 +76,7 @@ public extension Decimal {
         case .static:
             return Decimal(123_123)
         case .dynamic:
-            guard !exclusions.isEmpty else { return Decimal(Int.random(in: min ... max)) }
+            guard !exclusions.isEmpty else { return Decimal(Int.random(in: min...max)) }
 
             let allowedRange = ClosedRange(uncheckedBounds: (min, max)).filter { !exclusions.contains($0) }
             return Decimal(allowedRange.randomElement() ?? min)
@@ -95,12 +95,12 @@ public extension TimeInterval {
     ) -> TimeInterval {
         switch arbitraryType {
         case .dynamic:
-            guard !exclusions.isEmpty else { return TimeInterval.random(in: min ... max) }
+            guard !exclusions.isEmpty else { return TimeInterval.random(in: min...max) }
 
             var randomElement: TimeInterval = min
 
             repeat {
-                randomElement = TimeInterval.random(in: min ... max)
+                randomElement = TimeInterval.random(in: min...max)
             } while exclusions.contains(randomElement)
 
             return randomElement
@@ -130,11 +130,11 @@ public extension Float {
     ) -> Float {
         switch arbitraryType {
         case .dynamic:
-            guard !exclusions.isEmpty else { return Float.random(in: min ... max) }
+            guard !exclusions.isEmpty else { return Float.random(in: min...max) }
             var randomElement: Float = min
 
             repeat {
-                randomElement = Float.random(in: min ... max)
+                randomElement = Float.random(in: min...max)
             } while exclusions.contains(randomElement)
 
             return randomElement

@@ -83,16 +83,14 @@ public struct FunctionBodyMockMacro: BodyMacro {
             let secondName = parameter.secondName
             let comma: TokenSyntax? = index == parameters.count - 1 ? nil : .commaToken()
 
-            var mockFunctionCallExpr: LabeledExprSyntax
-
-            if let secondName {
+            var mockFunctionCallExpr = if let secondName {
                 if firstName.text == "_" {
-                    mockFunctionCallExpr = LabeledExprSyntax(
+                    LabeledExprSyntax(
                         expression: DeclReferenceExprSyntax(baseName: secondName),
                         trailingComma: comma
                     )
                 } else {
-                    mockFunctionCallExpr = LabeledExprSyntax(
+                    LabeledExprSyntax(
                         label: firstName,
                         colon: .colonToken(),
                         expression: DeclReferenceExprSyntax(baseName: secondName),
@@ -100,7 +98,7 @@ public struct FunctionBodyMockMacro: BodyMacro {
                     )
                 }
             } else {
-                mockFunctionCallExpr = LabeledExprSyntax(
+                LabeledExprSyntax(
                     label: firstName,
                     colon: .colonToken(),
                     expression: DeclReferenceExprSyntax(baseName: firstName),
