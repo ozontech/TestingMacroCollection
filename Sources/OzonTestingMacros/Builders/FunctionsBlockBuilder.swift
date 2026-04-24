@@ -2,7 +2,7 @@
 //  FunctionsBlockBuilder.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import SwiftSyntax
@@ -127,6 +127,7 @@ enum FunctionsBlockBuilder {
                     partialResult.appending(parameter)
                 }
             let isFuncThrowable = function.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil
+            let errorType = function.signature.effectSpecifiers?.throwsClause?.type?.as(IdentifierTypeSyntax.self)
             let isAsyncFunc = function.signature.effectSpecifiers?.asyncSpecifier != nil
 
             let funcModifiers: DeclModifierListSyntax = if !functionsModifiers.isEmpty {
@@ -182,6 +183,7 @@ enum FunctionsBlockBuilder {
                 let errorProperty = VariablesFactory.makeErrorProperty(
                     clearMethodBuilder: clearMethodBuilder,
                     varName: propertiesShortName,
+                    errorType: errorType,
                     accessModifiers: _accessModifiers
                 )
                 result.append(.init(decl: errorProperty))
@@ -191,7 +193,7 @@ enum FunctionsBlockBuilder {
                         for: .error,
                         propertyName: propertiesShortName,
                         accessModifiers: accessModifiers,
-                        type: TypeSyntax(stringLiteral: .error)
+                        type: errorType ?? TypeSyntax(stringLiteral: .error)
                     )
                     setPropertyFunctions.append(setErrorMethod)
                 }
@@ -213,6 +215,7 @@ enum FunctionsBlockBuilder {
                 genericTypes: genericTypes,
                 accessModifiers: closureAccessModifiers,
                 isThrowable: isFuncThrowable,
+                errorType: errorType,
                 isAsync: isAsyncFunc
             )
 
@@ -413,7 +416,11 @@ enum FunctionsBlockBuilder {
             }
 
             let codeBlockSyntax = CodeBlockSyntax(statements: statements)
+            let functionAttributes = function.attributes
+                .filter { ALLOWED_ATTRIBUTES.contains($0.as(AttributeSyntax.self)?.attributeName.name ?? "") }
+
             return FunctionDeclSyntax(
+                attributes: functionAttributes,
                 modifiers: accessModifiers,
                 name: .identifier(function.name.text),
                 genericParameterClause: genericParameterClause,
@@ -481,11 +488,12 @@ enum FunctionsBlockBuilder {
         static func makeErrorProperty(
             clearMethodBuilder: ClearMethodBuilder?,
             varName: String,
+            errorType: IdentifierTypeSyntax?,
             accessModifiers: DeclModifierListSyntax
         ) -> VariableDeclSyntax {
             let name = varName + .error
             clearMethodBuilder?.addProperty(.nilable(propertyName: name))
-            let type = OptionalTypeSyntax(wrappedType: IdentifierTypeSyntax(name: .identifier(.error)))
+            let type = OptionalTypeSyntax(wrappedType: errorType ?? IdentifierTypeSyntax(name: .identifier(.error)))
             return VariableDeclSyntax(
                 modifiers: accessModifiers,
                 Keyword.var,
@@ -538,6 +546,7 @@ enum FunctionsBlockBuilder {
             genericTypes: [String],
             accessModifiers: DeclModifierListSyntax,
             isThrowable: Bool,
+            errorType: IdentifierTypeSyntax?,
             isAsync: Bool
         ) -> VariableDeclSyntax {
             let name = varName + .closure
@@ -560,10 +569,16 @@ enum FunctionsBlockBuilder {
                     )
                 )
             }
-            let effectSpecifiers = TypeEffectSpecifiersSyntax(
-                asyncSpecifier: isAsync ? .keyword(.async) : nil,
-                throwsClause: isThrowable ? .init(throwsSpecifier: .keyword(.throws)) : nil
-            )
+            var effectSpecifiers = TypeEffectSpecifiersSyntax(asyncSpecifier: isAsync ? .keyword(.async) : nil, throwsClause: nil)
+
+            if isThrowable {
+                effectSpecifiers.throwsClause = .init(throwsSpecifier: .keyword(.throws), type: errorType)
+                if errorType != nil {
+                    effectSpecifiers.throwsClause?.leftParen = .leftParenToken()
+                    effectSpecifiers.throwsClause?.rightParen = .rightParenToken()
+                }
+            }
+
             let functionTypeSyntax = FunctionTypeSyntax(
                 parameters: .init(arguments),
                 effectSpecifiers: effectSpecifiers,

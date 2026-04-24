@@ -2,7 +2,7 @@
 //  ArbitraryParameter.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import SwiftSyntax
@@ -17,4 +17,8 @@ struct ArbitraryParameter {
     let isIgnored: Bool
     /// When `true`, initializes the property as `nil`.
     let isNilable: Bool
+    /// Whether the default value should be empty, applicable to Collection.
+    let isEmpted: Bool
+    /// Whether the property contains an accessor declaration — `{ ... }`.
+    let isWithAccessor: Bool
 }

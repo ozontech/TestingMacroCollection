@@ -2,7 +2,7 @@
 //  FunctionBodyMockMacro.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import Foundation
@@ -83,7 +83,7 @@ public struct FunctionBodyMockMacro: BodyMacro {
             let secondName = parameter.secondName
             let comma: TokenSyntax? = index == parameters.count - 1 ? nil : .commaToken()
 
-            var mockFunctionCallExpr = if let secondName {
+            let mockFunctionCallExpr = if let secondName {
                 if firstName.text == "_" {
                     LabeledExprSyntax(
                         expression: DeclReferenceExprSyntax(baseName: secondName),

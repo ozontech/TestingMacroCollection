@@ -2,7 +2,7 @@
 //  AutoEquatableMacro.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import Foundation
@@ -283,7 +283,11 @@ public struct AutoEquatableMacro: ExtensionMacro {
         var caseList = cases
             .map { makeEnumCase($0, enumHasVariables: enumHasVariables) }
             .reduce(into: SwitchCaseListSyntax()) { $0.append(.switchCase($1)) }
-        caseList.append(.switchCase(makeDefaultCase()))
+
+        // The switch generated above covers all cases for an enum with a single case.
+        if cases.count > 1 {
+            caseList.append(.switchCase(makeDefaultCase()))
+        }
 
         return caseList
     }

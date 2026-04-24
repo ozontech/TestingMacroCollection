@@ -233,4 +233,31 @@ final class AutoEquatableMacroTests: XCTestCase {
         macros: testMacros
         )
     }
+    
+    func testAutoEquatableMacro_enumWithOneCase() {
+        assertMacroExpansion(
+        """
+        @AutoEquatable
+        enum Route {
+            case main
+        }
+        """,
+        expandedSource:
+        """
+        enum Route {
+            case main
+        }
+        
+        extension Route: Equatable {
+            static func == (lhs: Route, rhs: Route) -> Bool {
+                switch (lhs, rhs) {
+                case (.main, .main):
+                    return true
+                }
+            }
+        }
+        """,
+        macros: testMacros
+        )
+    }
 }

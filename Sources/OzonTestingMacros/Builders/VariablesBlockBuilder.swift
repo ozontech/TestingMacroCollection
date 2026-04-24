@@ -2,7 +2,7 @@
 //  VariablesBlockBuilder.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import SwiftSyntax
@@ -54,12 +54,15 @@ enum VariablesBlockBuilder {
                 result.append(
                     .init(decl: MissingDeclSyntax(placeholder: .init(stringLiteral: "\n    // MARK: - \(name)\n")))
                 )
+                let varAttributes = variable.attributes
+                    .filter { ALLOWED_ATTRIBUTES.contains($0.as(AttributeSyntax.self)?.attributeName.name ?? "") }
 
                 if isNonOptionalType {
                     let mockVar = MemberBlockItemSyntax(decl: makeMockVarGetterSetter(
                         name: name,
                         type: type,
-                        accessModifiers: accessModifiers
+                        accessModifiers: accessModifiers,
+                        attributes: varAttributes
                     ))
                     result.append(mockVar)
                 } else {
@@ -77,6 +80,7 @@ enum VariablesBlockBuilder {
                     }
 
                     let mockVar = VariableDeclSyntax(
+                        attributes: varAttributes,
                         modifiers: _accessModifiers,
                         Keyword.var,
                         name: .init(name),
@@ -138,7 +142,8 @@ enum VariablesBlockBuilder {
     private static func makeMockVarGetterSetter(
         name: IdentifierPatternSyntax,
         type: TypeAnnotationSyntax,
-        accessModifiers: DeclModifierListSyntax
+        accessModifiers: DeclModifierListSyntax,
+        attributes: AttributeListSyntax
     ) -> VariableDeclSyntax {
         let accessorBlock = AccessorBlockSyntax(
             accessors: .accessors(
@@ -156,6 +161,7 @@ enum VariablesBlockBuilder {
         )
 
         let newVar = VariableDeclSyntax(
+            attributes: attributes,
             modifiers: accessModifiers,
             bindingSpecifier: .keyword(Keyword.var),
             bindings: .init([binding])

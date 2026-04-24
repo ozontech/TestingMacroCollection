@@ -11,6 +11,137 @@ import SwiftSyntaxMacrosTestSupport
 import XCTest
 
 final class AnyMockableMacroTests: XCTestCase {
+    func testAnyMockable_withGenericInGenericClause() {
+        assertMacroExpansion(
+        """
+        @AnyMockable
+        class Service: IService {
+            func download<T: Decodable>(completion: @escaping (Result<T, Error>) -> Void) {}
+        }
+        """,
+        expandedSource:
+        """
+        class Service: IService {
+            func download<T: Decodable>(completion: @escaping (Result<T, Error>) -> Void) {
+                mock.download(completion: completion)
+            }
+
+            internal let mock = Mock()
+
+            internal final class Mock: @unchecked Sendable {
+
+                private let lock = AtomicLock()
+
+                // MARK: - download
+
+                fileprivate func download<T: Decodable>(completion: @escaping (Result<T, Error>) -> Void) {
+                    lock.performLockedAction {
+                        downloadCompletionCallsCount += 1
+                        downloadCompletionReceivedArguments.append(completion as! (Result<Any, Error>) -> Void)
+                    }
+                    downloadCompletionClosure?(completion as! (Result<Any, Error>) -> Void)
+                }
+                var downloadCompletionCallsCount = 0
+                var downloadCompletionReceivedArguments: [(Result<Any, Error>) -> Void] = []
+                var downloadCompletionClosure: ((@escaping (Result<Any, Error>) -> Void) -> Void)?
+            }
+        }
+
+        extension Service: ProxyableMock {
+        }
+        """,
+        macros: testMacros
+        )
+    }
+
+    func testAnyMockable_withTypedErrorActor() {
+        assertMacroExpansion(
+        """
+        @AnyMockable
+        actor ActorWithMethodThatThrowsBadError: ProtocolWithMethodThatThrowsBadError {
+            func throwBadError() async throws(BadError)
+        } 
+        """,
+        expandedSource:
+        """
+        actor ActorWithMethodThatThrowsBadError: ProtocolWithMethodThatThrowsBadError {
+            func throwBadError() async throws(BadError) {
+                try await mock.throwBadError()
+            }
+
+            internal let mock = Mock()
+
+            internal final class Mock: @unchecked Sendable {
+
+                private let lock = AtomicLock()
+
+                // MARK: - throwBadError
+
+                fileprivate func throwBadError() async throws(BadError) {
+                    throwBadErrorCallsCount += 1
+                    if let throwBadErrorError {
+                        throw throwBadErrorError
+                    }
+                    try await throwBadErrorClosure?()
+                }
+                var throwBadErrorCallsCount = 0
+                var throwBadErrorError: BadError?
+                var throwBadErrorClosure: (() async throws(BadError) -> Void)?
+            }
+        } 
+
+        extension ActorWithMethodThatThrowsBadError: ProxyableMock {
+        }
+        """,
+        macros: testMacros
+        )
+    }
+
+    func testAnyMockable_withTypedError() {
+        assertMacroExpansion(
+        """
+        @AnyMockable
+        class ClassWithMethodThatThrowsBadError: ProtocolWithMethodThatThrowsBadError {
+            func throwBadError() throws(BadError)
+        }
+        """,
+        expandedSource:
+        """
+        class ClassWithMethodThatThrowsBadError: ProtocolWithMethodThatThrowsBadError {
+            func throwBadError() throws(BadError) {
+                try mock.throwBadError()
+            }
+
+            internal let mock = Mock()
+
+            internal final class Mock: @unchecked Sendable {
+
+                private let lock = AtomicLock()
+
+                // MARK: - throwBadError
+
+                fileprivate func throwBadError() throws(BadError) {
+                    lock.performLockedAction {
+                        throwBadErrorCallsCount += 1
+                    }
+                    if let throwBadErrorError {
+                        throw throwBadErrorError
+                    }
+                    try throwBadErrorClosure?()
+                }
+                var throwBadErrorCallsCount = 0
+                var throwBadErrorError: BadError?
+                var throwBadErrorClosure: (() throws(BadError) -> Void)?
+            }
+        }
+
+        extension ClassWithMethodThatThrowsBadError: ProxyableMock {
+        }
+        """,
+        macros: testMacros
+        )
+    }
+
     func testAnyMockable_withEqualSignatures() {
         assertMacroExpansion(
         """

@@ -2,7 +2,7 @@
 //  TypealiasesBlockBuilder.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import Foundation

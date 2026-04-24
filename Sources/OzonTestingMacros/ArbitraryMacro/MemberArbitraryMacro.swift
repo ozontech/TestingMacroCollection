@@ -2,7 +2,7 @@
 //  MemberArbitraryMacro.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import SwiftSyntax
@@ -24,20 +24,38 @@ extension ArbitraryMacro: MemberMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        guard !declaration.is(ProtocolDeclSyntax.self), !declaration.variables.isEmpty else { return [] }
+        guard !declaration.is(ProtocolDeclSyntax.self),
+              !declaration.is(EnumDeclSyntax.self),
+              !declaration.variables.isEmpty else { return [] }
 
-        let initializerType = defineInitializerType(declaration: declaration)
+        guard let declGroup = declaration.asProtocol(DeclGroupSyntax.self),
+              let typeName = getTypeNameFromDecl(declGroup) else {
+            return []
+        }
+
+        let context = try makeContext(
+            node: node,
+            declaration: declaration,
+            declGroup: declaration,
+            typeName: typeName
+        )
+
+        let initializerType = defineInitializerType(
+            declaration: declaration,
+            accessModifier: context.accessModifier
+        )
 
         guard initializerType == .generated else { return [] }
 
-        let accessModifier = declaration.modifiers
-            .filter { $0.name.text == String.public }.isEmpty ? nil : DeclModifierSyntax(name: .keyword(.public))
         let variables = declaration.variables.reduce(into: [(TokenSyntax, TypeSyntax)]()) { partialResult, variable in
             guard let name = variable.name?.identifier, let type = variable.type?.type else { return }
 
             partialResult.append((name, type))
         }
-        let generatedInit = makeInit(variables: variables, accessModifier: accessModifier)
+        let generatedInit = makeInit(
+            variables: variables,
+            accessModifier: context.accessModifier.isInternal ? nil : context.accessModifier
+        )
 
         return [.init(generatedInit)]
     }
@@ -120,13 +138,18 @@ extension ArbitraryMacro: MemberMacro {
 
     /// Determines the initializer type to use.
     ///
-    ///   - Parameter declaration: the declaration to analyze for initializer requirements.
-    ///   - Returns: the appropriate initializer type.
+    /// - Parameters:
+    //   - declaration: the declaration to analyze for initializer requirements.
+    ///  - accessModifier: access modifier for the `arbitrary` method.
+    /// - Returns: the appropriate initializer type.
     ///
-    private static func defineInitializerType(declaration: DeclGroupSyntax) -> InitializerType {
+    private static func defineInitializerType(
+        declaration: DeclGroupSyntax,
+        accessModifier: DeclModifierSyntax
+    ) -> InitializerType {
         guard declaration.initializers.isEmpty else { return .base }
 
-        if declaration.is(StructDeclSyntax.self), !declaration.accessModifier.isPublic {
+        if declaration.is(StructDeclSyntax.self), !accessModifier.isPublic {
             return .base
         } else {
             return .generated

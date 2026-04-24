@@ -2,7 +2,7 @@
 //  SyntaxAnalizer.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import SwiftSyntax
@@ -36,5 +36,10 @@ extension SyntaxAnalizer {
     }
 }
 
+// MARK: - SyntaxChildren.Element + SyntaxAnalizer
+
 extension SyntaxChildren.Element: SyntaxAnalizer {}
+
+// MARK: - TypeSyntax + SyntaxAnalizer
+
 extension TypeSyntax: SyntaxAnalizer {}

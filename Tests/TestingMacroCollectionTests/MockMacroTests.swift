@@ -11,6 +11,343 @@ import SwiftSyntaxMacrosTestSupport
 import XCTest
 
 final class MockMacroTests: XCTestCase {
+    func testMockMacro_withGenericInGenericClause() {
+        assertMacroExpansion(
+        """
+        @Mock
+        protocol Service {
+            func download<T: Decodable>(completion: @escaping (Result<T, Error>) -> Void)
+        }
+        """,
+        expandedSource:
+        """
+        protocol Service {
+            func download<T: Decodable>(completion: @escaping (Result<T, Error>) -> Void)
+        }
+
+        #if DEBUG
+        final class ServiceMock: Service {
+
+            // MARK: - Default Empty Init
+
+            init() {
+            }
+
+            // MARK: - Deinit
+
+            func clearFunctionProperties() {
+                downloadCompletionReceivedArguments = []
+                downloadCompletionClosure = nil
+            }
+
+            deinit {
+                clearFunctionProperties()
+            }
+
+            private let lock = AtomicLock()
+
+            // MARK: - download
+
+            func download<T: Decodable>(completion: @escaping (Result<T, Error>) -> Void) {
+                lock.performLockedAction {
+                    downloadCompletionCallsCount += 1
+                    downloadCompletionReceivedArguments.append(completion as! (Result<Any, Error>) -> Void)
+                }
+                downloadCompletionClosure?(completion as! (Result<Any, Error>) -> Void)
+            }
+            var downloadCompletionCallsCount = 0
+            var downloadCompletionReceivedArguments: [(Result<Any, Error>) -> Void] = []
+            var downloadCompletionClosure: ((@escaping (Result<Any, Error>) -> Void) -> Void)?
+        }
+        #endif
+        """,
+        macros: testMacros
+        )
+    }
+
+    func testMockMacro_withAvailableAttribute() {
+        assertMacroExpansion(
+        """
+        @Mock
+        protocol NotAvailableService {
+            @available(iOS 14.0, macOS 11.0, *)
+            func download()
+        
+            @inlinable
+            func upload()
+        }
+        """,
+        expandedSource:
+        """
+        protocol NotAvailableService {
+            @available(iOS 14.0, macOS 11.0, *)
+            func download()
+        
+            @inlinable
+            func upload()
+        }
+        
+        #if DEBUG
+        final class NotAvailableServiceMock: NotAvailableService {
+
+            // MARK: - Default Empty Init
+
+            init() {
+            }
+
+            // MARK: - Deinit
+
+            func clearFunctionProperties() {
+                downloadClosure = nil
+                uploadClosure = nil
+            }
+
+            deinit {
+                clearFunctionProperties()
+            }
+
+            private let lock = AtomicLock()
+
+            // MARK: - download
+
+                @available(iOS 14.0, macOS 11.0, *) func download() {
+                lock.performLockedAction {
+                    downloadCallsCount += 1
+                }
+                downloadClosure?()
+            }
+            var downloadCallsCount = 0
+            var downloadClosure: (() -> Void)?
+
+            // MARK: - upload
+
+            func upload() {
+                lock.performLockedAction {
+                    uploadCallsCount += 1
+                }
+                uploadClosure?()
+            }
+            var uploadCallsCount = 0
+            var uploadClosure: (() -> Void)?
+        }
+        #endif
+        """,
+        macros: testMacros
+        )
+    }
+
+    func testMockMacro_withTypedErrorActor() {
+        assertMacroExpansion(
+        """
+        @Mock
+        protocol WithBadError: Actor {
+            func throwBadError() async throws(BadError)
+        }    
+        """,
+        expandedSource:
+        """
+        protocol WithBadError: Actor {
+            func throwBadError() async throws(BadError)
+        }    
+
+        #if DEBUG
+        actor WithBadErrorMock: WithBadError {
+
+            // MARK: - Default Empty Init
+
+            init() {
+            }
+
+            // MARK: - Deinit
+
+            func clearFunctionProperties() async {
+                throwBadErrorError = nil
+                throwBadErrorClosure = nil
+            }
+
+            deinit {
+                Task { [weak self] in
+                    await self?.clearFunctionProperties()
+                }
+            }
+
+            // MARK: - throwBadError
+
+            func throwBadError() async throws(BadError) {
+                throwBadErrorCallsCount += 1
+                if let throwBadErrorError {
+                    throw throwBadErrorError
+                }
+                try await throwBadErrorClosure?()
+            }
+            var throwBadErrorCallsCount = 0
+            private var throwBadErrorError: BadError?
+            private var throwBadErrorClosure: (() async throws(BadError) -> Void)?
+
+            func setThrowBadErrorError(_ error: BadError) {
+                throwBadErrorError = error
+            }
+            func setThrowBadErrorClosure(_ closure: @escaping (@Sendable () async throws(BadError) -> Void)) {
+                throwBadErrorClosure = closure
+            }
+        }
+        #endif
+        """,
+        macros: testMacros
+        )
+    }
+
+    func testMockMacro_withTypedError() {
+        assertMacroExpansion(
+        """
+        @Mock
+        protocol WithBadError {
+            func throwBadError() throws(BadError)
+        }
+        
+        @Mock
+        protocol WithBadGenericError {
+            func throwBadGenericError() throws(BadError<String>)
+        }
+        """,
+        expandedSource:
+        """
+        protocol WithBadError {
+            func throwBadError() throws(BadError)
+        }
+
+        #if DEBUG
+        final class WithBadErrorMock: WithBadError {
+
+            // MARK: - Default Empty Init
+
+            init() {
+            }
+
+            // MARK: - Deinit
+
+            func clearFunctionProperties() {
+                throwBadErrorError = nil
+                throwBadErrorClosure = nil
+            }
+
+            deinit {
+                clearFunctionProperties()
+            }
+
+            private let lock = AtomicLock()
+
+            // MARK: - throwBadError
+
+            func throwBadError() throws(BadError) {
+                lock.performLockedAction {
+                    throwBadErrorCallsCount += 1
+                }
+                if let throwBadErrorError {
+                    throw throwBadErrorError
+                }
+                try throwBadErrorClosure?()
+            }
+            var throwBadErrorCallsCount = 0
+            var throwBadErrorError: BadError?
+            var throwBadErrorClosure: (() throws(BadError) -> Void)?
+        }
+        #endif
+        protocol WithBadGenericError {
+            func throwBadGenericError() throws(BadError<String>)
+        }
+        
+        #if DEBUG
+        final class WithBadGenericErrorMock: WithBadGenericError {
+
+            // MARK: - Default Empty Init
+
+            init() {
+            }
+
+            // MARK: - Deinit
+
+            func clearFunctionProperties() {
+                throwBadGenericErrorError = nil
+                throwBadGenericErrorClosure = nil
+            }
+
+            deinit {
+                clearFunctionProperties()
+            }
+
+            private let lock = AtomicLock()
+
+            // MARK: - throwBadGenericError
+
+            func throwBadGenericError() throws(BadError<String>) {
+                lock.performLockedAction {
+                    throwBadGenericErrorCallsCount += 1
+                }
+                if let throwBadGenericErrorError {
+                    throw throwBadGenericErrorError
+                }
+                try throwBadGenericErrorClosure?()
+            }
+            var throwBadGenericErrorCallsCount = 0
+            var throwBadGenericErrorError: BadError<String>?
+            var throwBadGenericErrorClosure: (() throws(BadError<String>) -> Void)?
+        }
+        #endif
+        """,
+        macros: testMacros
+        )
+    }
+
+    func testMockMacro_withBuildType() {
+        assertMacroExpansion(
+        """
+        @Mock(buildType: .debug)
+        protocol DebugMock {}
+        
+        @Mock(buildType: .prod)
+        protocol ProdMock {}
+        
+        @Mock
+        protocol AlsoDebugMock {}
+        """,
+        expandedSource: """
+        protocol DebugMock {}
+
+        #if DEBUG
+        final class DebugMockMock: DebugMock {
+
+            // MARK: - Default Empty Init
+
+            init() {
+            }
+        }
+        #endif
+        protocol ProdMock {}
+
+        final class ProdMockMock: ProdMock {
+
+            // MARK: - Default Empty Init
+
+            init() {
+            }
+        }
+        protocol AlsoDebugMock {}
+
+        #if DEBUG
+        final class AlsoDebugMockMock: AlsoDebugMock {
+
+            // MARK: - Default Empty Init
+
+            init() {
+            }
+        }
+        #endif
+        
+        """, macros: testMacros
+        )
+    }
+
     func testMockMacro_withEqualSignatures() {
         assertMacroExpansion(
         """
@@ -35,6 +372,7 @@ final class MockMacroTests: XCTestCase {
             func jobOne(_ arg1: [String: Int], _ arg2: (Bool, Int), _ arg3: @Sendable @escaping () -> Void)
         }
         
+        #if DEBUG
         final class MethodOverloadingMock: MethodOverloading {
         
             // MARK: - Default Empty Init
@@ -128,6 +466,7 @@ final class MockMacroTests: XCTestCase {
             var jobOneArg1DictStringIntArg2TupleArg3AttributedFunctionReceivedArguments: [([String: Int], (Bool, Int), @Sendable () -> Void)] = []
             var jobOneArg1DictStringIntArg2TupleArg3AttributedFunctionClosure: (([String: Int], (Bool, Int), @Sendable @escaping () -> Void) -> Void)?
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -153,6 +492,7 @@ final class MockMacroTests: XCTestCase {
             func test_closure_with_return_value<T, E>(closure: @escaping (@Sendable (T, E) -> E)) async -> [T]
         }
         
+        #if DEBUG
         actor GenericActorMock: GenericActor {
         
             // MARK: - Default Empty Init
@@ -274,6 +614,7 @@ final class MockMacroTests: XCTestCase {
                 test_closure_with_return_valueClosureReturnValue = returnValue
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -299,6 +640,7 @@ final class MockMacroTests: XCTestCase {
             func test_closure_with_return_value<T, E>(closure: @escaping (T, E) -> E) -> [T]
         }
         
+        #if DEBUG
         final class GenericMock: Generic {
         
             // MARK: - Default Empty Init
@@ -395,6 +737,7 @@ final class MockMacroTests: XCTestCase {
             var test_closure_with_return_valueClosureClosure: ((@escaping (Any, Any) -> Any) -> [Any])?
             var test_closure_with_return_valueClosureReturnValue: [Any]!
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -422,6 +765,7 @@ final class MockMacroTests: XCTestCase {
             var tuple: (String, NSError) { get set }
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
 
             // MARK: - int
@@ -490,6 +834,7 @@ final class MockMacroTests: XCTestCase {
                 clearVariableProperties()
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -553,6 +898,7 @@ final class MockMacroTests: XCTestCase {
             var tuple: (String, NSError) { get set }
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - int
@@ -855,6 +1201,7 @@ final class MockMacroTests: XCTestCase {
                 clearVariableProperties()
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -876,6 +1223,7 @@ final class MockMacroTests: XCTestCase {
             var state: State { get set }
         }
         
+        #if DEBUG
         open class ViewModelMock: ViewModel {
             // MARK: - Typealiases
 
@@ -912,6 +1260,7 @@ final class MockMacroTests: XCTestCase {
                 clearVariableProperties()
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -933,6 +1282,7 @@ final class MockMacroTests: XCTestCase {
             var state: State { get set }
         }
         
+        #if DEBUG
         public final class ViewModelMock: ViewModel {
             // MARK: - Typealiases
 
@@ -965,6 +1315,7 @@ final class MockMacroTests: XCTestCase {
                 clearVariableProperties()
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -986,6 +1337,7 @@ final class MockMacroTests: XCTestCase {
             var state: State { get set }
         }
         
+        #if DEBUG
         final class ViewModelMock: ViewModel {
             // MARK: - Typealiases
 
@@ -1018,6 +1370,7 @@ final class MockMacroTests: XCTestCase {
                 clearVariableProperties()
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1067,6 +1420,7 @@ final class MockMacroTests: XCTestCase {
             func throwsReturningMethod() async throws -> Wrapper<Int>?
         }
 
+        #if DEBUG
         actor ActorMock: Actor {
 
             // MARK: - simpleType
@@ -1276,6 +1630,7 @@ final class MockMacroTests: XCTestCase {
                 throwsReturningMethodReturnValue = returnValue
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1295,6 +1650,7 @@ final class MockMacroTests: XCTestCase {
             init(argument: String)
         }
         
+        #if DEBUG
         actor IServiceMock: IService {
         
             // MARK: - Protocol Inits
@@ -1308,6 +1664,7 @@ final class MockMacroTests: XCTestCase {
             init() {
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1327,6 +1684,7 @@ final class MockMacroTests: XCTestCase {
             init(argument: String)
         }
         
+        #if DEBUG
         class IServiceMock: IService {
         
             // MARK: - Protocol Inits
@@ -1353,6 +1711,7 @@ final class MockMacroTests: XCTestCase {
                 clearVariableProperties()
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1374,6 +1733,7 @@ final class MockMacroTests: XCTestCase {
             init()
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - Protocol Inits
@@ -1385,6 +1745,7 @@ final class MockMacroTests: XCTestCase {
             init() {
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1404,6 +1765,7 @@ final class MockMacroTests: XCTestCase {
             init(argument: String)
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - Protocol Inits
@@ -1417,6 +1779,7 @@ final class MockMacroTests: XCTestCase {
             init() {
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1440,6 +1803,7 @@ final class MockMacroTests: XCTestCase {
             var delegate: IServiceDelegate? { get set }
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - ignoredDelegate
@@ -1461,6 +1825,7 @@ final class MockMacroTests: XCTestCase {
             init() {
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1486,6 +1851,7 @@ final class MockMacroTests: XCTestCase {
             func anotherSomeMethod() -> any IProtocol
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
 
             // MARK: - object
@@ -1554,6 +1920,7 @@ final class MockMacroTests: XCTestCase {
             var anotherSomeMethodClosure: (() -> any IProtocol)?
             var anotherSomeMethodReturnValue: (any IProtocol)!
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1573,6 +1940,7 @@ final class MockMacroTests: XCTestCase {
             func download(url: URL) -> Downloadable.File
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - Default Empty Init
@@ -1612,6 +1980,7 @@ final class MockMacroTests: XCTestCase {
             var downloadUrlClosure: ((URL) -> Downloadable.File)?
             var downloadUrlReturnValue: Downloadable.File!
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1631,6 +2000,7 @@ final class MockMacroTests: XCTestCase {
             var nested: Outer.Inner { get set }
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - nested
@@ -1660,6 +2030,7 @@ final class MockMacroTests: XCTestCase {
                 clearVariableProperties()
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1679,6 +2050,7 @@ final class MockMacroTests: XCTestCase {
             var closure: () -> Void { get set }
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - closure
@@ -1708,6 +2080,7 @@ final class MockMacroTests: XCTestCase {
                 clearVariableProperties()
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1727,6 +2100,7 @@ final class MockMacroTests: XCTestCase {
             func makeWork()
         }
         
+        #if DEBUG
         public final class IServiceMock: IParentServiceMock, IService {
         
             // MARK: - Default Empty Init
@@ -1758,6 +2132,7 @@ final class MockMacroTests: XCTestCase {
             public var makeWorkCallsCount = 0
             public var makeWorkClosure: (() -> Void)?
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1785,6 +2160,7 @@ final class MockMacroTests: XCTestCase {
             var tuple: (String?, Int) { get set }
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - worker
@@ -1866,6 +2242,7 @@ final class MockMacroTests: XCTestCase {
                 clearVariableProperties()
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1885,6 +2262,7 @@ final class MockMacroTests: XCTestCase {
             func download(path: String, completion: @escaping ([String]) -> Void)
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - Default Empty Init
@@ -1918,6 +2296,7 @@ final class MockMacroTests: XCTestCase {
             var downloadPathCompletionReceivedArguments: [(String, ([String]) -> Void)] = []
             var downloadPathCompletionClosure: ((String, @escaping ([String]) -> Void) -> Void)?
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1937,6 +2316,7 @@ final class MockMacroTests: XCTestCase {
             func download(completion: @escaping ([String]) -> Void)
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - Default Empty Init
@@ -1970,6 +2350,7 @@ final class MockMacroTests: XCTestCase {
             var downloadCompletionReceivedArguments: [([String]) -> Void] = []
             var downloadCompletionClosure: ((@escaping ([String]) -> Void) -> Void)?
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -1989,6 +2370,7 @@ final class MockMacroTests: XCTestCase {
             func makeWork()
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - Default Empty Init
@@ -2019,6 +2401,7 @@ final class MockMacroTests: XCTestCase {
             var makeWorkCallsCount = 0
             var makeWorkClosure: (() -> Void)?
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -2038,6 +2421,7 @@ final class MockMacroTests: XCTestCase {
             func makeWork()
         }
         
+        #if DEBUG
         class IServiceMock: IService {
         
             // MARK: - Default Empty Init
@@ -2072,6 +2456,7 @@ final class MockMacroTests: XCTestCase {
             var makeWorkCallsCount = 0
             var makeWorkClosure: (() -> Void)?
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -2096,6 +2481,7 @@ final class MockMacroTests: XCTestCase {
             func doWork() async throws -> Bool
         }
         
+        #if DEBUG
         public actor IServiceMock: IService {
         
             // MARK: - customValue
@@ -2166,6 +2552,7 @@ final class MockMacroTests: XCTestCase {
                 doWorkReturnValue = returnValue
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -2188,6 +2575,7 @@ final class MockMacroTests: XCTestCase {
             func makeWork(first argument: String, secondArgument: String) -> String
         }
         
+        #if DEBUG
         open class IServiceMock: IService {
         
             // MARK: - customValue
@@ -2235,6 +2623,7 @@ final class MockMacroTests: XCTestCase {
             open var makeWorkFirstArgumentSecondArgumentClosure: ((String, String) -> String)?
             open var makeWorkFirstArgumentSecondArgumentReturnValue: String!
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -2257,6 +2646,7 @@ final class MockMacroTests: XCTestCase {
             var customValue: Value? { get set }
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
             // MARK: - Typealiases
 
@@ -2271,6 +2661,7 @@ final class MockMacroTests: XCTestCase {
             init() {
             }
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -2300,6 +2691,7 @@ final class MockMacroTests: XCTestCase {
             func upload(fileAndPath: (URL, String)?)
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - Default Empty Init
@@ -2405,6 +2797,7 @@ final class MockMacroTests: XCTestCase {
             var uploadFileAndPathReceivedArguments: [(URL, String)?] = []
             var uploadFileAndPathClosure: (((URL, String)?) -> Void)?
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -2424,6 +2817,7 @@ final class MockMacroTests: XCTestCase {
             func funcWithTuple(arg: (String, Int))
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - Default Empty Init
@@ -2457,6 +2851,7 @@ final class MockMacroTests: XCTestCase {
             var funcWithTupleArgReceivedArguments: [(String, Int)] = []
             var funcWithTupleArgClosure: (((String, Int)) -> Void)?
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -2476,6 +2871,7 @@ final class MockMacroTests: XCTestCase {
             func funcWithTuple() -> (String, Int)
         }
         
+        #if DEBUG
         final class IServiceMock: IService {
         
             // MARK: - Default Empty Init
@@ -2512,6 +2908,7 @@ final class MockMacroTests: XCTestCase {
             var funcWithTupleClosure: (() -> (String, Int))?
             var funcWithTupleReturnValue: (String, Int)!
         }
+        #endif
         """,
         macros: testMacros
         )
@@ -2535,6 +2932,7 @@ final class MockMacroTests: XCTestCase {
                 func doWork() async
             }
             
+            #if DEBUG
             actor IServiceMock: IService {
             
                 // MARK: - name
@@ -2587,6 +2985,7 @@ final class MockMacroTests: XCTestCase {
                     doWorkClosure = closure
                 }
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -2612,6 +3011,7 @@ final class MockMacroTests: XCTestCase {
                 func doWork(input: Input) -> Output
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
                 // MARK: - Typealiases
             
@@ -2655,6 +3055,7 @@ final class MockMacroTests: XCTestCase {
                 var doWorkInputClosure: ((Input) -> Output)?
                 var doWorkInputReturnValue: Output!
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -2674,6 +3075,7 @@ final class MockMacroTests: XCTestCase {
                 func doWork() async throws -> String
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - Default Empty Init
@@ -2713,6 +3115,7 @@ final class MockMacroTests: XCTestCase {
                 var doWorkClosure: (() async throws -> String)?
                 var doWorkReturnValue: String!
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -2731,6 +3134,7 @@ final class MockMacroTests: XCTestCase {
                 func doWork() throws
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - Default Empty Init
@@ -2766,6 +3170,7 @@ final class MockMacroTests: XCTestCase {
                 var doWorkError: Error?
                 var doWorkClosure: (() throws -> Void)?
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -2785,6 +3190,7 @@ final class MockMacroTests: XCTestCase {
                 func doWork() async
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - Default Empty Init
@@ -2813,6 +3219,7 @@ final class MockMacroTests: XCTestCase {
                 var doWorkCallsCount = 0
                 var doWorkClosure: (() async -> Void)?
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -2832,6 +3239,7 @@ final class MockMacroTests: XCTestCase {
                 func doWork(arg: String?)
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - Default Empty Init
@@ -2865,6 +3273,7 @@ final class MockMacroTests: XCTestCase {
                 var doWorkArgReceivedArguments: [String?] = []
                 var doWorkArgClosure: ((String?) -> Void)?
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -2884,6 +3293,7 @@ final class MockMacroTests: XCTestCase {
                 func doWork() -> String?
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - Default Empty Init
@@ -2920,6 +3330,7 @@ final class MockMacroTests: XCTestCase {
                 var doWorkClosure: (() -> String?)?
                 var doWorkReturnValue: String?
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -2953,6 +3364,7 @@ final class MockMacroTests: XCTestCase {
                 func doWorkWithArgsAndReturnValue(string: String) -> [String: String]
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - worker
@@ -3062,6 +3474,7 @@ final class MockMacroTests: XCTestCase {
                 var doWorkWithArgsAndReturnValueStringClosure: ((String) -> [String: String])?
                 var doWorkWithArgsAndReturnValueStringReturnValue: [String: String]!
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -3081,6 +3494,7 @@ final class MockMacroTests: XCTestCase {
                 var worker: String { get set }
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - worker
@@ -3110,6 +3524,7 @@ final class MockMacroTests: XCTestCase {
                     clearVariableProperties()
                 }
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -3129,6 +3544,7 @@ final class MockMacroTests: XCTestCase {
                 var worker: String? { get set }
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - worker
@@ -3140,6 +3556,7 @@ final class MockMacroTests: XCTestCase {
                 init() {
                 }
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -3159,6 +3576,7 @@ final class MockMacroTests: XCTestCase {
                 var worker: String! { get set }
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - worker
@@ -3170,6 +3588,7 @@ final class MockMacroTests: XCTestCase {
                 init() {
                 }
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -3188,6 +3607,7 @@ final class MockMacroTests: XCTestCase {
                 func doWork()
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - Default Empty Init
@@ -3218,6 +3638,7 @@ final class MockMacroTests: XCTestCase {
                 var doWorkCallsCount = 0
                 var doWorkClosure: (() -> Void)?
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -3236,6 +3657,7 @@ final class MockMacroTests: XCTestCase {
                 func doWorkWithArgs(string: String, arg2: Bool)
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - Default Empty Init
@@ -3269,6 +3691,7 @@ final class MockMacroTests: XCTestCase {
                 var doWorkWithArgsStringArg2ReceivedArguments: [(String, Bool)] = []
                 var doWorkWithArgsStringArg2Closure: ((String, Bool) -> Void)?
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -3287,6 +3710,7 @@ final class MockMacroTests: XCTestCase {
                 func doWorkWithReturnValue() -> String
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - Default Empty Init
@@ -3323,6 +3747,7 @@ final class MockMacroTests: XCTestCase {
                 var doWorkWithReturnValueClosure: (() -> String)?
                 var doWorkWithReturnValueReturnValue: String!
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -3341,6 +3766,7 @@ final class MockMacroTests: XCTestCase {
                 func doWorkWithArgsAndReturnValue(string: String) -> String
             }
             
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - Default Empty Init
@@ -3380,6 +3806,7 @@ final class MockMacroTests: XCTestCase {
                 var doWorkWithArgsAndReturnValueStringClosure: ((String) -> String)?
                 var doWorkWithArgsAndReturnValueStringReturnValue: String!
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -3416,6 +3843,7 @@ final class MockMacroTests: XCTestCase {
                 func makeWork()
             }
 
+            #if DEBUG
             final class IServiceMock: IService, @unchecked Sendable {
             
                 // MARK: - Default Empty Init
@@ -3446,6 +3874,7 @@ final class MockMacroTests: XCTestCase {
                 var makeWorkCallsCount = 0
                 var makeWorkClosure: (() -> Void)?
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -3464,6 +3893,7 @@ final class MockMacroTests: XCTestCase {
                 func makeWork()
             }
 
+            #if DEBUG
             final class IServiceMock: IService, @unchecked Sendable {
             
                 // MARK: - Default Empty Init
@@ -3494,6 +3924,7 @@ final class MockMacroTests: XCTestCase {
                 var makeWorkCallsCount = 0
                 var makeWorkClosure: (() -> Void)?
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -3512,6 +3943,7 @@ final class MockMacroTests: XCTestCase {
                 func makeWork()
             }
 
+            #if DEBUG
             final class IServiceMock: IService {
             
                 // MARK: - Default Empty Init
@@ -3542,6 +3974,7 @@ final class MockMacroTests: XCTestCase {
                 var makeWorkCallsCount = 0
                 var makeWorkClosure: (() -> Void)?
             }
+            #endif
             """,
             macros: testMacros
         )
@@ -3560,6 +3993,7 @@ final class MockMacroTests: XCTestCase {
                 func makeWork() async
             }
 
+            #if DEBUG
             actor IServiceMock: IService {
 
                 // MARK: - Default Empty Init
@@ -3592,6 +4026,7 @@ final class MockMacroTests: XCTestCase {
                     makeWorkClosure = closure
                 }
             }
+            #endif
             """,
             macros: testMacros
         )

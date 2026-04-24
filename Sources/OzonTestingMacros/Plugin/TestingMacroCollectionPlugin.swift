@@ -2,7 +2,7 @@
 //  TestingMacroCollectionPlugin.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import Foundation
@@ -21,6 +21,8 @@ struct TestingMacroCollectionPlugin: CompilerPlugin {
         FunctionBodyMockMacro.self,
         IgnoredMacro.self,
         NilableMacro.self,
+        EmptedMacro.self,
         ArbitraryMacro.self,
+        ArbitraryDefaultCaseMacro.self,
     ]
 }

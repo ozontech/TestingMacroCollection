@@ -1,5 +1,45 @@
 # Version History
 
+# 3.1.0
+
+## Added
+
+- Added support for enumerations by the `@Arbitrary` macro. For the .static generation type, the case marked with `@ArbitraryEnumStaticCase` is used. For .dynamic — a random one.
+
+- Implemented the auxiliary `@ArbitraryEnumStaticCase` macro, which helps the @Arbitrary macro choose an enumeration case for the static generation type.
+
+- Added generation of an extension with the static .arbitrary() function by the Arbitrary macro.
+
+- Added the auxiliary `@Empted` macro for generating an empty collection by default in the `@Arbitrary` macro.
+
+- The `@Empted` macro can only be attached to `Array` and `Set`.
+
+- Removed redundant generation of default in switch for an enum with a single case in the `@AutoEquatable` macro.
+
+- The `accessModifier` parameter for the `@Arbitrary` macro.
+
+- Support for typed errors in methods with throws for mocks.
+
+- Support for the `@available` attribute for `@Mock` properties and methods.
+
+## Technical changes
+
+- Added support for method overloading for `@Mock` and `@AnyMockable`.
+
+- Raised the lower bound of `swift-syntax` to 601.0.0.
+
+- `@Mock` and `@Arbitrary` macros are wrapped in `#if DEBUG ... #endif`.
+
+## Fixed
+
+- Implemented ignoring of computed properties of models in the `@Arbitrary` macro.
+
+- The return value of a nested Enum inside an extension of the `@Arbitrary` macro.
+
+- Fixed generation of arbitrary for deeply nested types (e.g., One.Two.Three) in the `@Arbitrary` macro.
+
+- Support for a generic type inside a generic clause `Result<T, Error>`.
+
 # 3.0.1
 
 ## Technical changes

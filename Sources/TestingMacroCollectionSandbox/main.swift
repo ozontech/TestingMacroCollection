@@ -5,8 +5,8 @@
 //  Copyright © 2025 Ozon. All rights reserved.
 //
 
-import Foundation
 import TestingMacroCollection
+import Foundation
 
 // MARK: - Playground
 
@@ -14,9 +14,12 @@ import TestingMacroCollection
 
 // MARK: - Mock
 
+public enum BadError: Error {}
+
 @Mock(.open, heritability: .inheritable, sendableMode: .enabled, defaultValue: .static)
 protocol Generic {
-    func test_simple<T>(value: T) -> T
+    @available(iOS 14.0, macOS 11.0, *)
+    func test_simple<T>(value: T) async throws(BadError) -> T
     func test_complex<T, E>(value: [T], argument: (T, E)) -> [String: E]
     func test_closure<T, E>(closure: @escaping (T, E) -> E)
     func test_closure_with_return_value<T, E>(closure: @escaping (T, E) -> E) -> [T]
@@ -25,13 +28,14 @@ protocol Generic {
 @Mock
 protocol GenericActor: Actor {
     func test_simple<T>(value: T) async -> T
-    func test_complex<T, E>(value: [T], argument: (T, E)) async throws -> [String: E]
+    func test_complex<T, E>(value: [T], argument: (T, E)) async throws(BadError) -> [String: E]
     func test_closure<T, E>(closure: @escaping (@Sendable (T, E) -> E)) async
     func test_closure_with_return_value<T, E>(closure: @escaping (@Sendable (T, E) -> E)) async -> [T]
 }
 
 @Mock(heritability: .inheritable, sendableMode: .enabled, defaultValue: .static)
 protocol IParentService: Sendable {
+    @available(swift 5.0)
     var session: URLSession { get set }
 
     func download(path: String) async throws -> Data
@@ -41,14 +45,14 @@ protocol IParentService: Sendable {
 protocol MethodOverloading {
     func job<T>(arg: T)
     func job<T>(arg: T?)
-
+    
     func jobOne(_ arg1: Character, _ arg2: SecTrust, _ arg3: SecCertificate)
     func jobOne(_ arg1: Int?, _ arg2: [Bool], _ arg3: some IParentService)
     func jobOne(_ arg1: [String: Int], _ arg2: (Bool, Int), _ arg3: @Sendable @escaping () -> Void)
 }
 
 struct Outer {
-    struct Inner {}
+    struct Inner { }
 }
 
 @Mock(sendableMode: .enabled)
@@ -57,7 +61,7 @@ protocol IService: IParentService {
     var dictionary: [String: Any] { get set }
     var nested: Outer.Inner { get set }
 
-    func upload(data: String) async throws -> Bool
+    func upload(data: String) async throws(BadError) -> Bool
 }
 
 @Mock(.public)
@@ -80,7 +84,7 @@ protocol ISuperDuperSlowService: ISuperDuperFastService {
     var veryVeryVeryBigData: Data { get async }
     var nested: Outer.Inner { get async }
 
-    func superSlowMethod(bigFile: Data) async -> [Data]
+    func superSlowMethod(bigFile: Data) async throws(BadError) -> [Data]
 }
 
 @AnyMockable
@@ -89,7 +93,7 @@ actor MediumService: ISuperDuperSlowService {
     var nested: Outer.Inner
     var veryVeryVeryLittleData: (String, Data)
 
-    func superSlowMethod(bigFile: Data) async -> [Data] {}
+    func superSlowMethod(bigFile: Data) async throws(BadError) -> [Data] {}
 
     func superFastDownload(target: String) async {}
 
@@ -100,34 +104,26 @@ actor MediumService: ISuperDuperSlowService {
 class MethodOverloadingAnyMockable: MethodOverloading {
     func job<T>(arg: T) {}
     func job<T>(arg: T?) {}
-
+    
     func jobOne(_ arg1: Character, _ arg2: SecTrust, _ arg3: SecCertificate) {}
     func jobOne(_ arg1: Int?, _ arg2: [Bool], _ arg3: some IParentService) {}
-    func jobOne(_ arg1: [String: Int], _ arg2: (Bool, Int), _ arg3: @escaping () -> Void) {}
+    func jobOne(_ arg1: [String : Int], _ arg2: (Bool, Int), _ arg3: @escaping () -> Void) {}
 }
 
 @AnyMockable
 class AnyMockableWithGeneric: Generic {
-    func test_closure<T, E>(closure: @escaping (T, E) -> E) {
-        mock.test_closure(closure: closure)
-    }
-
-    func test_closure_with_return_value<T, E>(closure: @escaping (T, E) -> E) -> [T] {
-        mock.test_closure_with_return_value(closure: closure)
-    }
-
-    func test_simple<T>(value: T) -> T {
-        mock.test_simple(value: value)
-    }
-
-    func test_complex<T, E>(value: [T], argument: (T, E)) -> [String: E] {
-        mock.test_complex(value: value, argument: argument)
-    }
+    func test_closure<T, E>(closure: @escaping (T, E) -> E) {}
+    
+    func test_closure_with_return_value<T, E>(closure: @escaping (T, E) -> E) -> [T] {}
+    
+    func test_simple<T>(value: T) async throws(BadError) -> T {}
+    
+    func test_complex<T, E>(value: [T], argument: (T, E)) -> [String : E] {}
 }
 
 // MARK: - PerformanceMeasure
 
-let closure = {}
+let closure = { }
 
 let executionTime = #performanceMeasure {
     closure()
@@ -221,4 +217,93 @@ class Parent {
     let onetwo: One.Two
     let onetwoOptional: One.Two?
     let onetwoUnwraped: One.Two!
+}
+
+@Arbitrary
+struct OneOne {
+    let two: [OneOne.TwoTwo]
+    let three: OneOne.Three
+
+    @Arbitrary
+    struct Three {
+        let three: [Four]
+    }
+}
+
+extension OneOne {
+    @Arbitrary
+    struct TwoTwo {
+        let two: String
+    }
+}
+
+extension OneOne.TwoTwo {
+    @Arbitrary
+    struct FourFour {
+        let four: String
+    }
+}
+
+@Arbitrary
+struct Four {
+    let four: String
+}
+
+@Arbitrary
+struct ServiceModel {}
+
+@Mock
+@Arbitrary
+protocol AnotherServiceProtocol {}
+
+@Arbitrary()
+class Service {
+    let name: String
+    let model: ServiceModel
+    let anotherProtocol: AnotherServiceProtocol
+
+    init(
+        name: String,
+        model: ServiceModel,
+        anotherProtocol: AnotherServiceProtocol
+    ) {
+        self.name = name
+        self.model = model
+        self.anotherProtocol = anotherProtocol
+    }
+}
+
+@Arbitrary(.dynamic)
+enum MyEnum {
+    case a(name1: StructInEnum, name2: String)
+    case b
+}
+
+@Arbitrary
+struct StructInEnum {
+    let string: String
+}
+
+@Arbitrary
+class ClassWithEnum {
+    let int: Int
+    let enumVar: MyEnum
+    let nestedEnum: ClassWithEnum.NestedEnum
+}
+
+extension ClassWithEnum {
+    @Arbitrary()
+    enum NestedEnum {
+        @ArbitraryDefaultCase case a
+        case b
+    }
+}
+
+public struct PublicStruct {}
+
+public extension PublicStruct {
+    @Arbitrary(accessModifier: .internal)
+    struct InnerPublicStruct {
+        public let string: String
+    }
 }
