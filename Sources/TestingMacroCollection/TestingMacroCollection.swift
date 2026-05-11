@@ -30,7 +30,7 @@
 ///    - heritability: mock's heritability. Can be inherited or `final'.
 ///    - sendableMode: sendable mock generation mode.
 ///    - defaultValue: default value generation for non-optional properties. Default: `.static`.
-///    - buildType: The build type for which the mock is needed. For a `.debug` build, the mock will be wrapped in `#if debug`.
+/// - buildType: build type where the mock is needed. For `.debug` builds, the mock is wrapped in `#if debug`.
 /// Defaults to `debug`.
 ///
 @attached(peer, names: suffixed(Mock))
@@ -226,7 +226,7 @@ public macro Nilable() = #externalMacro(module: "OzonTestingMacros", type: "Nila
 ///     }
 ///  }
 ///
-///  /// Generated `extension`
+///  /// Generated `extension`:
 ///  extension Model {
 ///     public static func arbitrary(id: UUID = .arbitrary(), name: String = .arbitrary(.static), count: Int =
 ///  .arbitrary(.static) -> Model {
@@ -235,13 +235,11 @@ public macro Nilable() = #externalMacro(module: "OzonTestingMacros", type: "Nila
 ///  }
 /// ```
 ///
-/// - Parameters:
-///  - arbitraryType: the `Arbitrary` type. When using the `.dynamic` function, it generates random values of the `Foundation`
-/// types.
-///  - accessModifier: Access modifier for the generated enum. Defaults to auto, meaning it inherits the modifier from the
-/// attached type.
-///  - buildType: The build type. When set to `debug`, the generated `enum` and `extension` will be wrapped in `#if DEBUG`.
-/// Defaults to `debug`.
+/// -  Parameters:
+///   - arbitraryType: the `Arbitrary` type. With `.dynamic` generation, it creates random values for `Foundation` types.
+///   - accessModifier: access modifier for the generated enum. Defaults to `auto`, inherits it from the attached type.
+///   - buildType: build type. When set to `debug`, the generated `enum` and `extension` are wrapped in `#if DEBUG`.
+///     Defaults to `debug`.
 ///
 @attached(peer, names: suffixed(Arbitrary))
 @attached(member, names: arbitrary)
@@ -256,10 +254,8 @@ public macro Arbitrary(
 )
 
 /// Auxiliary macro.
-/// Specifies the case of an enumeration (`enum`) for generating the default value in the stub
-/// when using the `.static` generation type.
-///
-/// Example. For:
+/// Specifies the enumeration case `enum` for default value generation with `.static` generation type.
+/// Example:
 /// ```
 /// @Arbitrary
 /// enum MyEnum {
@@ -269,7 +265,7 @@ public macro Arbitrary(
 /// }
 /// ```
 ///
-/// The following will be generated:
+/// Generates:
 /// ```
 /// enum MyEnumArbitrary {
 ///     static func arbitrary() -> MyEnum {
@@ -283,8 +279,8 @@ public macro ArbitraryDefaultCase() = #externalMacro(
     type: "ArbitraryDefaultCaseMacro"
 )
 
-/// The macro itself does nothing. This is an auxiliary macro that,
-/// when attached to a declaration, lets the Arbitrary macro know that it should
+/// The macro does nothing by itself. It is an auxiliary macro that,
+/// when attached to a declaration, tells the `Arbitrary` macro to use `[]` for collection property default values.
 /// use `[]` — Empty, for the default value of collection properties.
 ///
 /// ```
@@ -295,7 +291,7 @@ public macro ArbitraryDefaultCase() = #externalMacro(
 /// }
 /// ```
 ///
-/// In this example, the `Arbitrary` macro will generate a default value for
+/// In this example, the `Arbitrary` macro generates a default value for `array: [String] = []`.
 /// `array: [String] = []`
 @attached(peer)
 public macro Empted() = #externalMacro(module: "OzonTestingMacros", type: "EmptedMacro")

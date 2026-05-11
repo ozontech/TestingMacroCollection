@@ -284,7 +284,7 @@ public struct AutoEquatableMacro: ExtensionMacro {
             .map { makeEnumCase($0, enumHasVariables: enumHasVariables) }
             .reduce(into: SwitchCaseListSyntax()) { $0.append(.switchCase($1)) }
 
-        // The switch generated above covers all cases for an enum with a single case.
+        // The generated switch covers all cases for an enum with a single case.
         if cases.count > 1 {
             caseList.append(.switchCase(makeDefaultCase()))
         }

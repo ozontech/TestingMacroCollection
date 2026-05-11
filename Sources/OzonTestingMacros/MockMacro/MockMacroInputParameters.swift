@@ -72,6 +72,6 @@ struct MockMacroInputParameters {
     let sendableMode: SendableMode
     /// Default value generation for standard or collection types.
     let defaultValues: DefaultValue
-    /// Generation of the `#if debug` expression, for the .debug value.
+    /// Generates the `#if debug` expression for the `.debug` value.
     let buildType: BuildType
 }

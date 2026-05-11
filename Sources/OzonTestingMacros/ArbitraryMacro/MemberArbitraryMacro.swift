@@ -139,10 +139,9 @@ extension ArbitraryMacro: MemberMacro {
     /// Determines the initializer type to use.
     ///
     /// - Parameters:
-    //   - declaration: the declaration to analyze for initializer requirements.
-    ///  - accessModifier: access modifier for the `arbitrary` method.
+    ///   - declaration: declaration to analyze for initializer requirements.
+    ///   - accessModifier: access modifier for the `arbitrary` method.
     /// - Returns: the appropriate initializer type.
-    ///
     private static func defineInitializerType(
         declaration: DeclGroupSyntax,
         accessModifier: DeclModifierSyntax

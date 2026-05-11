@@ -13,10 +13,10 @@ extension ArbitraryMacro {
     /// Creates an `arbitrary` method for the enumeration.
     ///
     /// - Parameters:
-    ///   - accessModifier: Access modifier for the `arbitrary` method.
-    ///   - enumDecl: Declaration of the enumeration for which the stub is being created.
-    ///   - arbitraryConfig: The `arbitrary` type — `static` or `dynamic`.
-    /// - Returns: The `arbitrary` method.
+    ///   - accessModifier: access modifier for the `arbitrary` method.
+    ///   - enumDecl: enumeration declaration for which the stub is created.
+    ///   - arbitraryConfig: the `Arbitrary` type, can be `static` or `dynamic`.
+    /// - Returns: the `arbitrary` method.
     /// - Throws: `ArbitraryMacroError`.
     static func makeArbitraryMethodForEnum(
         type: TypeSyntax? = nil,
@@ -24,21 +24,21 @@ extension ArbitraryMacro {
         enumDecl: any DeclGroupSyntax,
         arbitraryConfig: ArbitraryConfig
     ) throws -> FunctionDeclSyntax {
-        // Check that the declaration is indeed from an enumeration.
-        // We do not accept `enumDecl: EnumDeclSyntax` as input for ease of use.
+        // Checks that the declaration is actually an enumeration.
+        // We don't accept `enumDecl: EnumDeclSyntax` as input.
         guard let enumDecl = enumDecl.as(EnumDeclSyntax.self) else {
             throw ArbitraryMacroError.unsupportedType
         }
 
-        // Create modifiers for the `arbitrary` function declaration.
+        // Creates modifiers for the `arbitrary` function declaration.
         let modifiers = [accessModifier, .init(name: .keyword(.static))]
             .reduce(into: DeclModifierListSyntax()) { partialResult, modifier in
                 guard !modifier.isInternal else { return }
                 partialResult.append(modifier)
             }
 
-        // <- Get all case declarations of the enumeration.
-        // Note: a single `case` declaration can contain multiple cases, e.g. `case a, b`
+        // <- Gets all case declarations of the enumeration.
+        // Note: a single `case` declaration can contain multiple cases, for example, `case a, b`.
         let allEnumCaseDeclarations = enumDecl
             .memberBlock
             .members
@@ -50,13 +50,13 @@ extension ArbitraryMacro {
         }
         // ->
 
-        // Form the function signature.
+        // Forms the function signature.
         let functionSignature = FunctionSignatureSyntax(
             parameterClause: .init(parameters: []),
             returnClause: getReturnClause(type: type, typeName: enumDecl.name)
         )
 
-        // <- Form the function body.
+        // <- Forms the function body.
         let functionBody: CodeBlockSyntax = switch arbitraryConfig {
         case .static:
             try buildFunctionBodyForStatic(
@@ -68,7 +68,7 @@ extension ArbitraryMacro {
         }
         // ->
 
-        // Form the function.
+        // Forms the function.
         let functionDeclaration = FunctionDeclSyntax(
             modifiers: modifiers,
             name: .identifier(String.arbitrary),
@@ -82,24 +82,24 @@ extension ArbitraryMacro {
     /// Creates the body of the `arbitrary` function for `.dynamic` generation.
     ///
     /// - Parameters:
-    ///   - enumDecl: Declaration of the enumeration for which the stub is being created.
-    ///   - allCaseElements: All cases of the enumeration.
-    /// - Returns: The function body consisting of two blocks: 1. `let allCases = [...]` 2. `return allCases.random()!`.
+    ///   - enumDecl: enumeration declaration for which the stub is created.
+    ///   - allCaseElements: all enumeration cases.
+    /// - Returns: the function body consisting of two blocks: 1. `let allCases = [...]` 2. `return allCases.random()!`.
     /// - Throws: `ArbitraryMacroError`.
     private static func buildFunctionBodyForDynamic(
         enumDecl: EnumDeclSyntax,
         allCaseElements: [EnumCaseElementListSyntax.Element]
     ) throws -> CodeBlockSyntax {
-        // Create the elements of the `allCases` array.
+        // Creates elements of the `allCases` array.
         let allCasesArrayElements = try allCaseElements.enumerated().map { index, caseElement in
-            // Create an element of the `allCases` array without the surrounding syntax.
+            // Creates an array element without surrounding syntax.
             let allCasesArrayElementWithoutSyntax = try buildCaseExpression(
                 caseElement: caseElement,
                 enumDecl: enumDecl,
                 arbitraryConfig: .dynamic
             )
 
-            // Create an element of the `allCases` array with the surrounding syntax.
+            // Creates an element of the `allCases` array with the surrounding syntax.
             let allCasesArrayElementWithSyntax = ArrayElementSyntax(
                 expression: allCasesArrayElementWithoutSyntax,
                 trailingComma: index == allCaseElements.count - 1 ? nil : .commaToken()
@@ -108,7 +108,7 @@ extension ArbitraryMacro {
             return allCasesArrayElementWithSyntax
         }
 
-        // Create the `allCases` array.
+        // Creates the `allCases` array.
         let allCasesArrayWithSyntax = ArrayExprSyntax(
             leftSquare: .leftSquareToken(),
             elements: ArrayElementListSyntax(allCasesArrayElements),
@@ -117,7 +117,7 @@ extension ArbitraryMacro {
 
         let allCasesVarName = "allCases"
 
-        // Create the `allCases` variable without the surrounding syntax.
+        // Creates the `allCases` variable without the surrounding syntax.
         let allCasesVarWithoutSyntax = VariableDeclSyntax(
             .let,
             name: PatternSyntax(stringLiteral: allCasesVarName),
@@ -129,10 +129,10 @@ extension ArbitraryMacro {
             initializer: InitializerClauseSyntax(value: ExprSyntax(allCasesArrayWithSyntax))
         )
 
-        // Create the `allCases` variable with the surrounding syntax.
+        // Creates the `allCases` variable with the surrounding syntax.
         let allCasesVarWithSyntax = DeclSyntax(allCasesVarWithoutSyntax)
 
-        // <- Create a call to the `randomElement` function on the `allCases` variable.
+        // <- Creates a call to the `randomElement` function on the `allCases` variable.
         let randomElementCall = FunctionCallExprSyntax(
             calledExpression: MemberAccessExprSyntax(
                 base: DeclReferenceExprSyntax(baseName: .identifier(allCasesVarName)),
@@ -161,9 +161,9 @@ extension ArbitraryMacro {
     /// Creates the body of the `arbitrary` function for `.static` generation.
     ///
     /// - Parameters:
-    ///   - enumDecl: Declaration of the enumeration for which the stub is being created.
-    ///   - allEnumCaseDeclarations: All cases of the enumeration.
-    /// - Returns: The function body consisting of a single block: `return ...`.
+    ///   - enumDecl: enumeration declaration for which the stub is created.
+    ///   - allEnumCaseDeclarations: all enumeration cases.
+    /// - Returns: the function body containing a single `return ...` statement.
     /// - Throws: `ArbitraryMacroError`.
     private static func buildFunctionBodyForStatic(
         enumDecl: EnumDeclSyntax,
@@ -210,10 +210,10 @@ extension ArbitraryMacro {
     /// Creates an `.arbitrary` call for an enumeration case.
     ///
     /// - Parameters:
-    ///   - caseElement: The enumeration case.
-    ///   - enumDecl: Declaration of the enumeration.
-    ///   - arbitraryConfig: The generation type.
-    /// - Returns: An expression calling `.arbitrary` for the `caseElement`.
+    ///   - caseElement: enumeration case.
+    ///   - enumDecl: enumeration declaration.
+    ///   - arbitraryConfig: generation type.
+    /// - Returns: an expression calling `.arbitrary` for the `caseElement`.
     /// - Throws: `ArbitraryMacroError`.
     private static func buildCaseExpression(
         caseElement: EnumCaseElementListSyntax.Element,
@@ -253,8 +253,8 @@ extension ArbitraryMacro {
             )
 
             return functionCall
-            // Handle the case when the enumeration case has no associated types.
-            // Form a reference to the enumeration case.
+            // Handles enumeration cases without associated values.
+            // Creates a reference to the enumeration case.
         } else {
             let memberAccess = ExprSyntax(
                 MemberAccessExprSyntax(

@@ -61,10 +61,10 @@ extension ArbitraryMacro {
         }
     }
 
-    /// Extracts the type name of the declaration.
+    /// Extracts the type name from the declaration.
     ///
-    /// - Parameter decl: Declaration from which to extract the type.
-    /// - Returns: Syntax of the declaration name.
+    /// - Parameter decl: declaration from which to extract the type name.
+    /// - Returns: syntax of the declaration name.
     static func getTypeNameFromDecl(_ decl: DeclGroupSyntax) -> TokenSyntax? {
         switch decl.kind {
         case .classDecl:

@@ -30,7 +30,7 @@ extension ArbitraryMacro: ExtensionMacro {
 
             let arbitraryMethod: FunctionDeclSyntax? = switch context.arbitraryType {
             case .mock:
-                /// Generation of an `extension` for protocols is not required, as it cannot be used.
+                /// No `extension` generation needed for protocols as it can't be used.
                 nil
             case .model:
                 makeArbitraryMethodForModel(
@@ -71,7 +71,7 @@ extension ArbitraryMacro: ExtensionMacro {
 
             return [extensionDecl]
         } catch {
-            /// Return an empty array of declarations to avoid duplicate error reporting.
+            /// Returns an empty array of declarations to avoid duplicate error reporting.
             return []
         }
     }
