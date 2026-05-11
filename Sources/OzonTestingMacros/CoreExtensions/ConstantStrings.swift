@@ -2,7 +2,7 @@
 //  ConstantStrings.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import SwiftSyntax
@@ -68,12 +68,19 @@ extension String {
     static let auto = "auto"
     static let unchecked = "unchecked"
     static let defaultValue = "defaultValue"
+    static let buildType = "buildType"
     static let unlabeledParam = "unlabeled_param"
 
     static let mockAccessor = "MockAccessor"
     static let proxyableMock = "ProxyableMock"
     static let functionBodyMock = "FunctionBodyMock"
+    static let arbitraryDefaultCaseMacro = "ArbitraryDefaultCase"
+    static let arbitraryType = "arbitraryType"
+    static let accessModifier = "accessModifier"
 
+    static let randomElementFunctionName = "randomElement"
+
+    static let empted = "Empted"
     static let underscore = "_"
     static let empty = ""
 }

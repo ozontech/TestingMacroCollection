@@ -2,7 +2,7 @@
 //  ClearFunctionBlockBuilder.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import SwiftSyntax
@@ -25,8 +25,7 @@ final class ClearMethodBuilder {
 
         var propertyName: String {
             switch self {
-            case .collection(let propertyName),
-                 .nilable(let propertyName):
+            case .collection(let propertyName), .nilable(let propertyName):
                 propertyName
             }
         }

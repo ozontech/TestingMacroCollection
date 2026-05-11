@@ -2,7 +2,7 @@
 //  ArbitraryMacro.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import Foundation
@@ -32,6 +32,8 @@ public struct ArbitraryMacro: PeerMacro {
         case mock
         /// Generates `Arbitrary` for the model using initializer.
         case model
+        /// Generates `Arbitrary` for one of the cases depending on the generation type.
+        case enumeration
     }
 
     enum ArbitraryConfig: String {
@@ -49,41 +51,50 @@ public struct ArbitraryMacro: PeerMacro {
         guard let declGroup = declaration.asProtocol(DeclGroupSyntax.self), let typeName = getTypeNameFromDecl(declGroup) else {
             throw ArbitraryMacroError.unsupportedType
         }
-        let arbitraryType = try defineArbitraryTypeForDecl(declaration)
-        let arbitraryConfig = try defineArbitraryConfig(from: node)
-        let accessModifier = declGroup.accessModifier
 
-        let parameters = declGroup.variables
-            .reduce(into: [ArbitraryParameter]()) { partialResult, variable in
-                guard let name = variable.name?.identifier, let type = variable.type?.type else { return }
+        let context = try makeContext(
+            node: node,
+            declaration: declaration,
+            declGroup: declGroup,
+            typeName: typeName
+        )
 
-                partialResult.append(.init(name: name, type: type, isIgnored: variable.isIgnored, isNilable: variable.isNilable))
-            }
-        let arbitraryMethod: FunctionDeclSyntax = switch arbitraryType {
+        let arbitraryMethod: FunctionDeclSyntax = switch context.arbitraryType {
         case .mock:
             makeArbitraryMethodForMock(
-                accessModifier: accessModifier,
+                accessModifier: context.accessModifier,
                 typeName: typeName,
-                parameters: parameters,
-                arbitraryConfig: arbitraryConfig,
+                parameters: context.parameters,
+                arbitraryConfig: context.arbitraryConfig,
                 declMembers: declGroup.memberBlock.members
             )
         case .model:
             makeArbitraryMethodForModel(
-                accessModifier: accessModifier,
+                accessModifier: context.accessModifier,
                 typeName: typeName,
-                parameters: parameters,
-                arbitraryConfig: arbitraryConfig,
+                parameters: context.parameters,
+                arbitraryConfig: context.arbitraryConfig,
                 declMembers: declGroup.memberBlock.members
             )
+        case .enumeration:
+            try makeArbitraryMethodForEnum(
+                accessModifier: context.accessModifier,
+                enumDecl: declGroup,
+                arbitraryConfig: context.arbitraryConfig
+            )
         }
+
+        let leadingTrivia = Trivia.ifDebug.ifNeeded(context.buildType == .debug)
+        let trailingTrivia = Trivia.endif.ifNeeded(context.buildType == .debug)
 
         return [
             .init(
                 makeEnumDecl(
-                    accessModifier: accessModifier,
+                    leadingTrivia: leadingTrivia,
+                    accessModifier: context.accessModifier,
                     typeName: typeName.text,
-                    arbitraryMethod: arbitraryMethod
+                    arbitraryMethod: arbitraryMethod,
+                    trailingTrivia: trailingTrivia
                 )
             ),
         ]
@@ -98,9 +109,11 @@ public struct ArbitraryMacro: PeerMacro {
     ///  - Returns: `enum` declaration with `arbitrary` method.
     ///
     static func makeEnumDecl(
+        leadingTrivia: Trivia? = nil,
         accessModifier: DeclModifierSyntax,
         typeName: String,
-        arbitraryMethod: FunctionDeclSyntax
+        arbitraryMethod: FunctionDeclSyntax,
+        trailingTrivia: Trivia? = nil,
     ) -> EnumDeclSyntax {
         var accessModifiers = DeclModifierListSyntax()
 
@@ -109,9 +122,11 @@ public struct ArbitraryMacro: PeerMacro {
         }
 
         return EnumDeclSyntax(
+            leadingTrivia: leadingTrivia,
             modifiers: accessModifiers,
             name: .init(stringLiteral: typeName + String.arbitrary.capitalized),
-            memberBlock: .init(members: .init(arrayLiteral: .init(decl: arbitraryMethod)))
+            memberBlock: .init(members: .init(arrayLiteral: .init(decl: arbitraryMethod))),
+            trailingTrivia: trailingTrivia
         )
     }
 
@@ -172,61 +187,14 @@ public struct ArbitraryMacro: PeerMacro {
         }
     }
 
-    /// Defines the `Arbitrary` type: `static` or `dynamic`.
-    private static func defineArbitraryConfig(from node: AttributeSyntax) throws -> ArbitraryConfig {
-        let strokeType = node.arguments?
-            .as(LabeledExprListSyntax.self)?
-            .filter { $0.expression.as(MemberAccessExprSyntax.self) != nil }.first?
-            .expression
-            .as(MemberAccessExprSyntax.self)?
-            .declName
-            .baseName
-            .text ?? String.static
-
-        if strokeType == String.static {
-            return .static
-        } else if strokeType == String.dynamic {
-            return .dynamic
-        } else {
-            throw ArbitraryMacroError.wrongArbitraryType
+    static func getReturnClause(
+        type: TypeSyntax?,
+        typeName: TokenSyntax
+    ) -> ReturnClauseSyntax {
+        guard let type else {
+            return ReturnClauseSyntax(type: IdentifierTypeSyntax(name: typeName))
         }
-    }
 
-    /// Defines generated `Arbitrary` type.
-    private static func defineArbitraryTypeForDecl(_ declaration: DeclSyntaxProtocol) throws -> ArbitaryType {
-        if declaration.is(ProtocolDeclSyntax.self) {
-            return .mock
-        } else if declaration.is(StructDeclSyntax.self) ||
-            declaration.is(ClassDeclSyntax.self) ||
-            declaration.is(ActorDeclSyntax.self) {
-            return .model
-        } else {
-            throw ArbitraryMacroError.unsupportedType
-        }
-    }
-
-    /// Returns the declaration type name.
-    ///
-    /// - Parameter decl: the declaration to extract the type name from.
-    /// - Returns: the syntax of the declaration's type name.
-    /// - Throws: an error if the macro is applied to an unsupported declaration.
-    ///
-    private static func getTypeNameFromDecl(_ decl: DeclGroupSyntax) -> TokenSyntax? {
-        switch decl.kind {
-        case .classDecl:
-            decl.as(ClassDeclSyntax.self)?.name
-        case .structDecl:
-            decl.as(StructDeclSyntax.self)?.name
-        case .extensionDecl:
-            decl.as(ExtensionDeclSyntax.self)?.extendedType.as(IdentifierTypeSyntax.self)?.name
-        case .actorDecl:
-            decl.as(ActorDeclSyntax.self)?.name
-        case .enumDecl:
-            decl.as(EnumDeclSyntax.self)?.name
-        case .protocolDecl:
-            decl.as(ProtocolDeclSyntax.self)?.name
-        default:
-            nil
-        }
+        return ReturnClauseSyntax(type: type)
     }
 }

@@ -1,5 +1,5 @@
 //
-//  IgnoredMacro.swift
+//  ArbitraryDefaultCaseMacro.swift
 //  TestingMacroCollection
 //
 //  Copyright © 2026 Ozon. All rights reserved.
@@ -9,7 +9,7 @@ import Foundation
 import SwiftSyntax
 import SwiftSyntaxMacros
 
-public struct IgnoredMacro: PeerMacro {
+public struct ArbitraryDefaultCaseMacro: PeerMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingPeersOf declaration: some DeclSyntaxProtocol,

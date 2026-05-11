@@ -2,7 +2,7 @@
 //  MockMacro.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import Foundation
@@ -195,25 +195,31 @@ public struct MockMacro: PeerMacro {
 
         // Collects a syntax of the macro body.
         let memberBlock = MemberBlockSyntax(members: .init(members))
+        let leadingTrivia = Trivia.ifDebug.ifNeeded(inputParameters.buildType == .debug)
+        let trailingTrivia = Trivia.endif.ifNeeded(inputParameters.buildType == .debug)
 
         return if isActor {
             // Generates an actor's declaration for the mock.
             [
                 .init(ActorDeclSyntax(
+                    leadingTrivia: leadingTrivia,
                     modifiers: accessModifiers,
                     name: newTypeName,
                     inheritanceClause: inheritedClause,
-                    memberBlock: memberBlock
+                    memberBlock: memberBlock,
+                    trailingTrivia: trailingTrivia
                 )),
             ]
         } else {
             // Generates a class declaration for mock.
             [
                 .init(ClassDeclSyntax(
+                    leadingTrivia: leadingTrivia,
                     modifiers: accessModifiers,
                     name: newTypeName,
                     inheritanceClause: inheritedClause,
-                    memberBlock: memberBlock
+                    memberBlock: memberBlock,
+                    trailingTrivia: trailingTrivia
                 )),
             ]
         }

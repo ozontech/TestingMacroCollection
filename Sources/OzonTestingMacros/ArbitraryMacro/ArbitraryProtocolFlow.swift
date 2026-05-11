@@ -2,7 +2,7 @@
 //  ArbitraryProtocolFlow.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import SwiftSyntax
@@ -126,7 +126,8 @@ extension ArbitraryMacro {
         guard !parameter.isIgnored, let defaultValue = makeDefaultValueExprSyntaxForType(
             parameter.type,
             parentTypeName: parentTypeName,
-            arbitraryConfig: arbitraryConfig
+            arbitraryConfig: arbitraryConfig,
+            isEmpted: parameter.isEmpted
         ) else {
             return nil
         }
@@ -140,12 +141,14 @@ extension ArbitraryMacro {
     ///   - type: input argument type.
     ///   - parentTypeName: name of the parent declaration.
     ///   - arbitraryConfig: the `Arbitrary` type, can be `static` or `dynamic`.
+    ///   - isEmpted: whether the default value should be empty.
     ///  - Returns: default value expression.
     ///
-    private static func makeDefaultValueExprSyntaxForType(
+    static func makeDefaultValueExprSyntaxForType(
         _ type: TypeSyntax,
         parentTypeName: TokenSyntax,
-        arbitraryConfig: ArbitraryConfig
+        arbitraryConfig: ArbitraryConfig,
+        isEmpted: Bool = false
     ) -> ExprSyntaxProtocol? {
         let variableType = getVariableType(type)
 
@@ -159,20 +162,16 @@ extension ArbitraryMacro {
                 declName: DeclReferenceExprSyntax(baseName: .identifier(arbitraryIdentifier))
             )
         case .nested(let cleanType):
-            let typeName: String
-            let type = cleanType.as(MemberTypeSyntax.self)
-            let baseTypeName = type?.baseType.as(IdentifierTypeSyntax.self)?.name.text
+            let fullTypePath = collectFullNestedTypePathWithDots(cleanType)
 
-            if let type, let baseTypeName {
-                typeName = baseTypeName + "." + type.name.text
-            } else {
+            guard !fullTypePath.isEmpty else {
                 return nil
             }
 
             return FunctionCallExprSyntax(
                 calledExpression: MemberAccessExprSyntax(
                     base: DeclReferenceExprSyntax(
-                        baseName: .identifier(typeName + String.arbitrary.capitalized)
+                        baseName: .identifier(fullTypePath + String.arbitrary.capitalized)
                     ),
                     declName: .init(baseName: .identifier(String.arbitrary))
                 ),
@@ -239,9 +238,26 @@ extension ArbitraryMacro {
                 parentTypeName: parentTypeName,
                 arbitraryConfig: arbitraryConfig
             )
-        case .array,
-             .set:
-            return ArrayExprSyntax(leftSquare: .leftSquareToken(), elements: .init([]), rightSquare: .rightSquareToken())
+        case .array, .set:
+            guard !isEmpted else {
+                return ArrayExprSyntax(leftSquare: .leftSquareToken(), elements: .init([]), rightSquare: .rightSquareToken())
+            }
+
+            let arbitraryIdentifier = "\(String.arbitrary)" +
+                (typeCanBeStaticOrDynamic(type) ? "(.\(arbitraryConfig.rawValue))" : "()")
+            let expr = ExprSyntax(
+                MemberAccessExprSyntax(
+                    period: .periodToken(),
+                    declName: DeclReferenceExprSyntax(baseName: .identifier(arbitraryIdentifier))
+                )
+            )
+            return ArrayExprSyntax(
+                leftSquare: .leftSquareToken(),
+                elements: .init(expressions: [
+                    expr,
+                ]),
+                rightSquare: .rightSquareToken()
+            )
         case .tuple:
             guard let typesInTuple = type.as(TupleTypeSyntax.self)?.elements else { return nil }
 
@@ -455,5 +471,21 @@ extension ArbitraryMacro {
                     return nil
                 }
             }
+    }
+
+    private static func collectFullNestedTypePathWithDots(_ type: TypeSyntax) -> String {
+        var components: [String] = []
+
+        var currentType: TypeSyntax? = type
+        while let memberType = currentType?.as(MemberTypeSyntax.self) {
+            components.append(memberType.name.text)
+            currentType = memberType.baseType
+        }
+
+        if let identifierType = currentType?.as(IdentifierTypeSyntax.self) {
+            components.append(identifierType.name.text)
+        }
+
+        return components.reversed().joined(separator: ".")
     }
 }

@@ -2,7 +2,7 @@
 //  VariableDeclSyntax+Ext.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import SwiftSyntax
@@ -41,6 +41,16 @@ extension VariableDeclSyntax {
                 .as(IdentifierTypeSyntax.self)?
                 .name
                 .text == String.nilable
+        }) != nil
+    }
+
+    var isEmpted: Bool {
+        attributes.first(where: {
+            $0.as(AttributeSyntax.self)?
+                .attributeName
+                .as(IdentifierTypeSyntax.self)?
+                .name
+                .text == String.empted
         }) != nil
     }
 }

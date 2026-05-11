@@ -2,7 +2,7 @@
 //  MockMacroInputParametersHandler.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import SwiftSyntax
@@ -20,6 +20,7 @@ enum MockMacroInputParametersHandler {
         var accessModifier = AccessModifier.internal
         var sendableMode = SendableMode.auto
         var defaultValue = DefaultValue.static
+        var buildType = BuildType.debug
 
         let parametersFromMacro = MacroArgumentExtracter.extractArguments(from: node)
 
@@ -43,12 +44,17 @@ enum MockMacroInputParametersHandler {
             defaultValue = DefaultValue(rawValue: defaultValueValue) ?? .static
         }
 
+        if let buildTypeValue = parametersFromMacro[.buildType] as? String {
+            buildType = BuildType(rawValue: buildTypeValue) ?? .debug
+        }
+
         return .init(
             associatedTypes: associatedTypes,
             accessModifier: accessModifier,
             heritability: heritability,
             sendableMode: sendableMode,
-            defaultValues: defaultValue
+            defaultValues: defaultValue,
+            buildType: buildType
         )
     }
 

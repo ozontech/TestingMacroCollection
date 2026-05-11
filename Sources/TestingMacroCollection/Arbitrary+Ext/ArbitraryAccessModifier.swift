@@ -1,14 +1,12 @@
 //
-//  AccessModifier.swift
+//  ArbitraryAccessModifier.swift
 //  TestingMacroCollection
 //
 //  Copyright © 2026 Ozon. All rights reserved.
 //
 
-import Foundation
-
-public enum AccessModifier {
+public enum ArbitraryAccessModifier {
+    case auto
     case `public`
-    case open
     case `internal`
 }

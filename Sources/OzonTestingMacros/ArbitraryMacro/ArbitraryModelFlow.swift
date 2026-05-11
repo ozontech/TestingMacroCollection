@@ -2,7 +2,7 @@
 //  ArbitraryModelFlow.swift
 //  TestingMacroCollection
 //
-//  Copyright © 2025 Ozon. All rights reserved.
+//  Copyright © 2026 Ozon. All rights reserved.
 //
 
 import SwiftSyntax
@@ -10,6 +10,7 @@ import SwiftSyntaxMacros
 
 extension ArbitraryMacro {
     static func makeArbitraryMethodForModel(
+        type: TypeSyntax? = nil,
         accessModifier: DeclModifierSyntax,
         typeName: TokenSyntax,
         parameters: [ArbitraryParameter],
@@ -23,12 +24,13 @@ extension ArbitraryMacro {
                 partialResult.append(modifier)
             }
 
-        let params = parameters
+        let parametersToUse = parameters.filter { !$0.isWithAccessor }
+        let functionArgumentsSyntax = parametersToUse
             .enumerated()
             .reduce(into: LabeledExprListSyntax()) { partialResult, item in
                 let offset = item.offset
                 let parameter = item.element
-                let trailingComma: TokenSyntax? = offset == parameters.count - 1 ? nil : .commaToken()
+                let trailingComma: TokenSyntax? = offset == parametersToUse.count - 1 ? nil : .commaToken()
 
                 partialResult.append(
                     LabeledExprSyntax(
@@ -41,9 +43,9 @@ extension ArbitraryMacro {
             }
 
         let initObjectSyntax = FunctionCallExprSyntax(
-            calledExpression: DeclReferenceExprSyntax(baseName: typeName),
+            calledExpression: DeclReferenceExprSyntax(baseName: getBaseName(type: type, typeName: typeName)),
             leftParen: .leftParenToken(),
-            arguments: params,
+            arguments: functionArgumentsSyntax,
             rightParen: .rightParenToken()
         )
         let item = CodeBlockItemSyntax.Item(initObjectSyntax)
@@ -56,13 +58,24 @@ extension ArbitraryMacro {
             signature: .init(
                 parameterClause: makeArbitraryMethodSignatureParameterClause(
                     parentTypeName: typeName,
-                    parameters: parameters,
+                    parameters: parametersToUse,
                     arbitararyConfig: arbitraryConfig,
                     declMembers: declMembers
                 ),
-                returnClause: .init(type: IdentifierTypeSyntax(name: typeName))
+                returnClause: getReturnClause(type: type, typeName: typeName)
             ),
             body: functionBody
         )
+    }
+
+    private static func getBaseName(
+        type: TypeSyntax?,
+        typeName: TokenSyntax
+    ) -> TokenSyntax {
+        guard let type else {
+            return typeName
+        }
+
+        return TokenSyntax(stringLiteral: type.name)
     }
 }
